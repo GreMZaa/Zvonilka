@@ -11,26 +11,26 @@
 
 /* === 1. Переменные и Дизайн-Токены === */
 :root {
-  /* Цветовая палитра */
-  --bg-color: #060913;
-  --panel-bg: rgba(15, 23, 42, 0.45);
-  --panel-border: rgba(255, 255, 255, 0.06);
+  /* Цветовая палитра - Благородный угольно-матовый (Apple-inspired Obsidian Charcoal) */
+  --bg-color: #0c0e14;
+  --panel-bg: rgba(22, 25, 34, 0.85); /* Плотный матовый полупрозрачный фон */
+  --panel-border: rgba(255, 255, 255, 0.08);
   --text-primary: #F8FAFC;
   --text-secondary: #94A3B8;
-  --text-muted: #64748B;
+  --text-muted: #475569;
   
-  /* Цвета состояний */
-  --color-accent: #00F2FE;
-  --color-accent-rgb: 0, 242, 254;
-  --color-success: #10B981;
-  --color-success-rgb: 16, 185, 129;
-  --color-danger: #FF3366;
-  --color-danger-rgb: 255, 51, 102;
+  /* Цвета состояний - Спокойные пастельные тона без кислотного свечения */
+  --color-accent: #ffffff;
+  --color-accent-rgb: 255, 255, 255;
+  --color-success: #34D399; /* Мягкий изумрудный */
+  --color-success-rgb: 52, 211, 153;
+  --color-danger: #F87171; /* Мягкий кораллово-красный */
+  --color-danger-rgb: 248, 113, 113;
   
-  /* Градиенты по умолчанию (Idle) */
-  --gradient-start: #00F2FE;
-  --gradient-end: #4FACFE;
-  --glow-opacity: 0.15;
+  /* Цвета заливки орба (Idle) - Благородный матовый антрацит */
+  --gradient-start: #334155;
+  --gradient-end: #1E293B;
+  --glow-opacity: 0; /* Полное отключение неона */
 
   /* Шрифты */
   --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -42,7 +42,7 @@
   --radius-sm: 12px;
   --radius-full: 9999px;
   
-  --transition-smooth: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   --transition-fast: all 0.15s ease;
 }
 
@@ -68,40 +68,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* === 3. Фоновые эффекты свечения === */
+/* === 3. Фоновые эффекты свечения (Полностью отключены для матового стиля) === */
 .ambient-glow {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
+  display: none !important;
 }
 
 .glow-orb {
-  position: absolute;
-  border-radius: var(--radius-full);
-  filter: blur(140px);
-  opacity: var(--glow-opacity);
-  transition: var(--transition-smooth);
-}
-
-.glow-orb--1 {
-  top: -10%;
-  left: -20%;
-  width: 70%;
-  height: 50%;
-  background: radial-gradient(circle, var(--gradient-start) 0%, transparent 80%);
-}
-
-.glow-orb--2 {
-  bottom: -10%;
-  right: -20%;
-  width: 70%;
-  height: 50%;
-  background: radial-gradient(circle, var(--gradient-end) 0%, transparent 80%);
+  display: none !important;
 }
 
 /* === 4. Контейнер приложения === */
@@ -210,10 +183,32 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start; /* Начинаем контент сверху */
   align-items: center;
-  gap: 40px;
+  gap: 25px; /* Умеренный зазор */
   width: 100%;
+  overflow-y: auto; /* Вертикальный скролл при необходимости */
+  scrollbar-width: thin; /* Тонкий скроллбар для Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  padding: 10px 4px 20px 4px;
+}
+
+/* Кастомный минималистичный скроллбар для Chrome/Safari/Edge */
+.app-main::-webkit-scrollbar {
+  width: 4px;
+}
+
+.app-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-main::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+}
+
+.app-main::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Текст статуса */
@@ -264,7 +259,7 @@ body {
   width: 100%;
   height: 100%;
   border-radius: var(--radius-full);
-  border: 1px solid var(--gradient-start);
+  border: 1px solid rgba(255, 255, 255, 0.08); /* Мягкие матовые рамки */
   opacity: 0;
   pointer-events: none;
   transform: scale(0.6);
@@ -290,7 +285,7 @@ body {
   justify-content: center;
   align-items: center;
   transition: var(--transition-smooth);
-  filter: drop-shadow(0 10px 30px rgba(var(--color-accent-rgb), 0.35));
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.5)); /* Глубокая темная тень без неона */
 }
 
 .fluid-orb svg {
@@ -413,23 +408,25 @@ body {
 .btn-main {
   width: 100%;
   max-width: 320px;
-  padding: 20px;
+  padding: 18px;
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.15rem;
-  letter-spacing: -0.01em;
-  color: #000;
-  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-  border: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-md);
   cursor: pointer;
-  box-shadow: 0 10px 30px rgba(var(--color-accent-rgb), 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   transition: var(--transition-smooth);
 }
 
 .btn-main:hover {
   transform: translateY(-2px);
-  box-shadow: 0 15px 40px rgba(var(--color-accent-rgb), 0.45);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 }
 
 .btn-main:active {
@@ -448,7 +445,7 @@ body {
   cursor: pointer;
   color: white;
   transition: var(--transition-smooth);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
 }
 
 .btn-round:hover {
@@ -460,21 +457,23 @@ body {
 }
 
 .btn-round--success {
-  background: linear-gradient(135deg, #10B981, #059669);
-  box-shadow: 0 10px 30px rgba(var(--color-success-rgb), 0.35);
+  background: #10B981; /* Классический плоский зеленый */
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
 }
 
 .btn-round--success:hover {
-  box-shadow: 0 15px 35px rgba(var(--color-success-rgb), 0.5);
+  background: #059669;
+  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.3);
 }
 
 .btn-round--danger {
-  background: linear-gradient(135deg, #FF3366, #E11D48);
-  box-shadow: 0 10px 30px rgba(var(--color-danger-rgb), 0.35);
+  background: #EF4444; /* Классический плоский красный */
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.2);
 }
 
 .btn-round--danger:hover {
-  box-shadow: 0 15px 35px rgba(var(--color-danger-rgb), 0.5);
+  background: #DC2626;
+  box-shadow: 0 12px 28px rgba(239, 68, 68, 0.3);
 }
 
 /* === 10. Дебаг-Лог / Подробности соединения === */
@@ -548,9 +547,9 @@ body {
 
 /* State: Calling (В процессе вызова) */
 .state-calling {
-  --gradient-start: #FBBF24;
-  --gradient-end: #F59E0B;
-  --color-accent-rgb: 245, 158, 11;
+  --gradient-start: #D97706; /* Матовый янтарный */
+  --gradient-end: #78350F;
+  --color-accent-rgb: 217, 119, 6;
 }
 
 .state-calling .pulse-ring--1 {
@@ -569,13 +568,13 @@ body {
 
 /* State: Connected (На связи) */
 .state-connected {
-  --gradient-start: #10B981;
-  --gradient-end: #059669;
-  --color-accent-rgb: 16, 185, 129;
+  --gradient-start: #059669; /* Матовый темно-зеленый */
+  --gradient-end: #064E3B;
+  --color-accent-rgb: 5, 150, 105;
 }
 
 .state-connected .pulse-ring {
-  border-color: var(--color-success);
+  border-color: rgba(52, 211, 153, 0.25);
 }
 .state-connected .pulse-ring--1 {
   animation: pulseRings 2.5s infinite ease-out;
@@ -585,7 +584,7 @@ body {
 }
 
 .state-connected .fluid-orb {
-  filter: drop-shadow(0 15px 40px rgba(var(--color-success-rgb), 0.5));
+  filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.45)); /* Темная матовая тень без неона */
 }
 
 .state-connected .fluid-orb svg path {
@@ -594,13 +593,13 @@ body {
 
 /* State: Incoming (Входящий вызов) */
 .state-incoming {
-  --gradient-start: #8B5CF6;
-  --gradient-end: #6366F1;
-  --color-accent-rgb: 99, 102, 241;
+  --gradient-start: #4F46E5; /* Приглушенный чернильно-синий */
+  --gradient-end: #312E81;
+  --color-accent-rgb: 79, 70, 229;
 }
 
 .state-incoming .pulse-ring {
-  border-color: #8B5CF6;
+  border-color: rgba(79, 70, 229, 0.25);
 }
 .state-incoming .pulse-ring--1 {
   animation: ripple 2s infinite ease-out;
@@ -614,9 +613,9 @@ body {
 
 /* State: Error / Denied */
 .state-failed, .state-denied {
-  --gradient-start: #EF4444;
-  --gradient-end: #DC2626;
-  --color-accent-rgb: 239, 68, 68;
+  --gradient-start: #DC2626; /* Спокойный темно-красный */
+  --gradient-end: #7F1D1D;
+  --color-accent-rgb: 220, 38, 38;
 }
 
 .state-failed .fluid-orb-wrapper, .state-denied .fluid-orb-wrapper {
@@ -840,7 +839,7 @@ body {
 
 .peer-status.online {
   color: var(--color-success);
-  text-shadow: 0 0 10px rgba(var(--color-success-rgb), 0.5);
+  text-shadow: none;
 }
 
 /* === 16. Окно настроек (Settings Modal) === */
@@ -960,7 +959,7 @@ body {
   height: 16px;
   border-radius: var(--radius-full);
   background: var(--color-accent);
-  box-shadow: 0 0 10px rgba(var(--color-accent-rgb), 0.5);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   transition: var(--transition-fast);
 }
 
@@ -993,8 +992,8 @@ body {
 .mic-meter-bar {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, var(--color-success), var(--color-accent));
-  box-shadow: 0 0 10px rgba(var(--color-success-rgb), 0.5);
+  background: var(--color-success);
+  box-shadow: none;
   border-radius: var(--radius-full);
   transition: width 0.08s ease;
 }

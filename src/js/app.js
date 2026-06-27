@@ -23,7 +23,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // 4. Service Worker — регистрация для PWA
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
-      .then(() => log('App', '✅ Service Worker зарегистрирован.'))
+      .then((reg) => {
+        log('App', '✅ Service Worker зарегистрирован.');
+        
+        // Слушаем появление нового сервис-воркера для автообновления
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                log('App', '🔄 Доступно обновление! Перезапуск страницы...');
+                window.location.reload();
+              }
+            });
+          }
+        });
+      })
       .catch((err) => log('App', `⚠️ Service Worker не удалось зарегистрировать: ${err.message}`));
   }
 

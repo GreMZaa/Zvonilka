@@ -106,26 +106,37 @@ export function initUI() {
     return;
   }
 
-  // Привязка событий кнопок
-  document.getElementById('btn-call').addEventListener('click', _handleCallClick);
-  document.getElementById('btn-join').addEventListener('click', _handleJoinClick);
-  document.getElementById('btn-hangup').addEventListener('click', _handleHangupClick);
-  document.getElementById('btn-decline').addEventListener('click', _handleHangupClick);
-  document.getElementById('btn-accept').addEventListener('click', _handleAcceptClick);
-  document.getElementById('btn-copy').addEventListener('click', _handleCopyClick);
-  document.getElementById('btn-toggle-log').addEventListener('click', _handleToggleLogClick);
+  // Привязка событий кнопок с защитой от отсутствующих элементов (кеш PWA)
+  const safeBind = (idOrEl, event, handler) => {
+    const el = typeof idOrEl === 'string' ? document.getElementById(idOrEl) : idOrEl;
+    if (el) {
+      el.addEventListener(event, handler);
+    } else {
+      log('UI', `⚠️ Элемент [${typeof idOrEl === 'string' ? '#' + idOrEl : 'DOM Element'}] не найден. Пропуск привязки.`);
+    }
+  };
+
+  safeBind('btn-call', 'click', _handleCallClick);
+  safeBind('btn-join', 'click', _handleJoinClick);
+  safeBind('btn-hangup', 'click', _handleHangupClick);
+  safeBind('btn-decline', 'click', _handleHangupClick);
+  safeBind('btn-accept', 'click', _handleAcceptClick);
+  safeBind('btn-copy', 'click', _handleCopyClick);
+  safeBind('btn-toggle-log', 'click', _handleToggleLogClick);
   
-  btnMuteEl.addEventListener('click', _handleMuteClick);
-  document.getElementById('btn-toggle-history').addEventListener('click', _handleToggleHistoryClick);
+  if (btnMuteEl) safeBind(btnMuteEl, 'click', _handleMuteClick);
+  safeBind('btn-toggle-history', 'click', _handleToggleHistoryClick);
 
   // Обработчики настроек
-  btnSettingsEl.addEventListener('click', _handleOpenSettingsClick);
-  btnCloseSettingsEl.addEventListener('click', _handleCloseSettingsClick);
-  btnSaveSettingsEl.addEventListener('click', _handleSaveSettingsClick);
-  btnTestMicEl.addEventListener('click', _handleTestMicClick);
-  rangeVolumeEl.addEventListener('input', (e) => {
-    setRingtoneVolume(parseFloat(e.target.value));
-  });
+  if (btnSettingsEl) safeBind(btnSettingsEl, 'click', _handleOpenSettingsClick);
+  if (btnCloseSettingsEl) safeBind(btnCloseSettingsEl, 'click', _handleCloseSettingsClick);
+  if (btnSaveSettingsEl) safeBind(btnSaveSettingsEl, 'click', _handleSaveSettingsClick);
+  if (btnTestMicEl) safeBind(btnTestMicEl, 'click', _handleTestMicClick);
+  if (rangeVolumeEl) {
+    rangeVolumeEl.addEventListener('input', (e) => {
+      setRingtoneVolume(parseFloat(e.target.value));
+    });
+  }
 
   // Загрузка сохраненной громкости
   const savedVolume = localStorage.getItem('zvonilka_ringtone_volume');
@@ -184,7 +195,9 @@ function _transitionToState(state) {
   }
 
   // 1. Очищаем все классы состояния у корневого элемента
-  appEl.className = 'app-container';
+  if (appEl) {
+    appEl.className = 'app-container';
+  }
   _stopVibration();
   _stopTimer();
   
@@ -209,7 +222,9 @@ function _transitionToState(state) {
 
   // Добавляем соответствующий класс состояния
   const mappedClass = _mapStateToClass(state);
-  appEl.classList.add(mappedClass);
+  if (appEl) {
+    appEl.classList.add(mappedClass);
+  }
 
   // Получаем текущие данные сигналинга
   const sigState = getSignalingState();
