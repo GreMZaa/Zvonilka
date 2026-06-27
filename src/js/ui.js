@@ -14,6 +14,14 @@
 import { createRoom, joinRoom, cleanup, getState as getSignalingState } from './signaling.js';
 import { startCall, prepareToReceiveCall, acceptIncomingCall, hangUp, onConnectionStateChange } from './webrtc.js';
 import { log } from './utils.js';
+import { 
+  playRingtone, 
+  stopRingtone, 
+  playDialTone, 
+  stopDialTone, 
+  playConnectTone, 
+  playDisconnectTone 
+} from './audio-effects.js';
 
 // === Кэш DOM-элементов ===
 let appEl = null;
@@ -105,6 +113,10 @@ function _transitionToState(state) {
   appEl.className = 'app-container';
   _stopVibration();
   _stopTimer();
+  
+  // Останавливаем все фоновые циклы звуков
+  stopRingtone();
+  stopDialTone();
 
   // Добавляем соответствующий класс состояния
   const mappedClass = _mapStateToClass(state);
@@ -138,6 +150,11 @@ function _transitionToState(state) {
       _hide(actionIdleEl);
       _show(actionActiveEl);
       _hide(actionIncomingEl);
+
+      // Если мы звонящие (caller), запускаем гудки ожидания
+      if (isCaller) {
+        playDialTone();
+      }
       break;
 
     case 'connected':
@@ -151,6 +168,9 @@ function _transitionToState(state) {
       _hide(actionIdleEl);
       _show(actionActiveEl);
       _hide(actionIncomingEl);
+
+      // Проигрываем звук подключения
+      playConnectTone();
       break;
 
     case 'incoming':
@@ -164,8 +184,9 @@ function _transitionToState(state) {
       _hide(actionActiveEl);
       _show(actionIncomingEl);
       
-      // Запускаем вибрацию для входящего звонка
+      // Запускаем вибрацию и рингтон входящего звонка
       _startVibration();
+      playRingtone();
       break;
 
     case 'failed':
@@ -175,6 +196,9 @@ function _transitionToState(state) {
       _hide(joinSectionEl);
       _show(actionActiveEl);
       _addSignalLog('❌ Соединение не удалось установить или оборвалось.');
+
+      // Проигрываем звук сброса/ошибки
+      playDisconnectTone();
       break;
 
     case 'timeout':
@@ -184,6 +208,9 @@ function _transitionToState(state) {
       _hide(joinSectionEl);
       _show(actionActiveEl);
       _addSignalLog('⏳ Превышено время ожидания ответа.');
+
+      // Проигрываем звук сброса/ошибки
+      playDisconnectTone();
       break;
 
     case 'permission-denied':
@@ -193,6 +220,9 @@ function _transitionToState(state) {
       _hide(joinSectionEl);
       _show(actionActiveEl);
       _addSignalLog('⚠️ Ошибка: запрещен доступ к микрофону.');
+
+      // Проигрываем звук сброса/ошибки
+      playDisconnectTone();
       break;
 
     default:
