@@ -42,6 +42,50 @@ let isConnected = false;
 /** @type {Array<function>} Список колбэков для входящих сигналов */
 const signalListeners = [];
 
+/** @type {Array<function>} Список колбэков для изменения присутствия собеседника */
+const presenceListeners = [];
+
+/**
+ * Подписка на изменение онлайн-статуса собеседника.
+ * @param {function(boolean): void} callback
+ * @returns {function} функция отписки
+ */
+export function onPeerPresenceChange(callback) {
+  if (typeof callback !== 'function') return () => {};
+  presenceListeners.push(callback);
+  return () => {
+    const idx = presenceListeners.indexOf(callback);
+    if (idx !== -1) presenceListeners.splice(idx, 1);
+  };
+}
+
+/**
+ * Логирует ошибку или предупреждение в Supabase таблицу diagnostics.
+ * @param {'error' | 'warn' | 'info'} level
+ * @param {string} message
+ * @param {object} details
+ */
+export async function logErrorToSupabase(level, message, details = {}) {
+  if (!supabase) return;
+  
+  const record = {
+    room_id: currentRoomId,
+    level,
+    message,
+    details,
+  };
+
+  try {
+    const { error } = await supabase.from('diagnostics').insert(record);
+    if (error) {
+      console.warn('[Diagnostics] Ошибка при отправке удаленного лога:', error.message);
+    }
+  } catch (err) {
+    console.warn('[Diagnostics] Ошибка:', err.message);
+  }
+}
+
+
 // ============================
 // 1. Инициализация
 // ============================
@@ -236,6 +280,7 @@ export async function cleanup() {
   currentRole = null;
   isConnected = false;
   signalListeners.length = 0;
+  presenceListeners.length = 0; // Очищаем слушателей присутствия
 
   log('Signaling', '✅ Очистка завершена.');
 }
@@ -279,8 +324,30 @@ function _ensureInitialized() {
 function _subscribeToRoom() {
   if (!currentRoomId) return;
 
+  const peerRole = currentRole === 'caller' ? 'callee' : 'caller';
+
   channel = supabase
-    .channel(`room:${currentRoomId}`)
+    .channel(`room:${currentRoomId}`, {
+      config: {
+        presence: {
+          key: currentRole,
+        },
+      },
+    })
+    .on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState();
+      // Собеседник в сети, если его роль присутствует в списке ключей
+      const isPeerOnline = !!state[peerRole];
+      log('Presence', `👥 Собеседник ${peerRole} ${isPeerOnline ? 'в сети' : 'не в сети'}`);
+      
+      presenceListeners.forEach(listener => {
+        try {
+          listener(isPeerOnline);
+        } catch (e) {
+          log('Presence', `❌ Ошибка в слушателе присутствия: ${e.message}`);
+        }
+      });
+    })
     .on(
       'postgres_changes',
       {
@@ -313,7 +380,16 @@ function _subscribeToRoom() {
         }
       }
     )
-    .subscribe((status) => {
+    .subscribe(async (status) => {
       log('Signaling', `📡 Статус подписки: ${status}`);
+      if (status === 'SUBSCRIBED') {
+        try {
+          // Регистрируем свое присутствие в комнате
+          await channel.track({ online_at: new Date().toISOString() });
+          log('Presence', '✅ Свое присутствие зарегистрировано.');
+        } catch (err) {
+          log('Presence', `⚠️ Не удалось зарегистрировать присутствие: ${err.message}`);
+        }
+      }
     });
 }

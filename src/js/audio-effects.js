@@ -16,10 +16,20 @@
 import { log } from './utils.js';
 
 let audioCtx = null;
-
-// Таймеры эффектов
 let ringtoneInterval = null;
 let dialToneInterval = null;
+
+// Множитель громкости (по умолчанию 0.5)
+let ringtoneVolume = 0.5;
+
+/**
+ * Устанавливает громкость воспроизведения эффектов.
+ * @param {number} vol - громкость от 0.0 до 1.0
+ */
+export function setRingtoneVolume(vol) {
+  ringtoneVolume = Math.max(0, Math.min(1, vol));
+  log('AudioEffects', `🔊 Громкость установлена на: ${ringtoneVolume}`);
+}
 
 /**
  * Инициализирует аудио контекст при первом взаимодействии пользователя.
@@ -60,7 +70,7 @@ export function playRingtone() {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, now + idx * 0.12);
       
-      gainNode.gain.setValueAtTime(0.15, now + idx * 0.12);
+      gainNode.gain.setValueAtTime(0.15 * ringtoneVolume, now + idx * 0.12);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.3);
       
       osc.connect(gainNode);
@@ -113,8 +123,8 @@ export function playDialTone() {
     osc2.frequency.setValueAtTime(400, now);
     
     gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(0.08, now + 0.05); // Плавное нарастание
-    gainNode.gain.setValueAtTime(0.08, now + 0.95);
+    gainNode.gain.linearRampToValueAtTime(0.08 * ringtoneVolume, now + 0.05); // Плавное нарастание
+    gainNode.gain.setValueAtTime(0.08 * ringtoneVolume, now + 0.95);
     gainNode.gain.linearRampToValueAtTime(0, now + 1.0); // Плавное затухание
     
     osc1.connect(gainNode);
@@ -164,7 +174,7 @@ export function playConnectTone() {
     osc.type = 'triangle'; // Более мягкий звук
     osc.frequency.setValueAtTime(freq, now + idx * 0.1);
     
-    gainNode.gain.setValueAtTime(0.12, now + idx * 0.1);
+    gainNode.gain.setValueAtTime(0.12 * ringtoneVolume, now + idx * 0.1);
     gainNode.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.25);
     
     osc.connect(gainNode);
@@ -200,7 +210,7 @@ export function playDisconnectTone() {
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(600, now);
 
-    gainNode.gain.setValueAtTime(0.1, now + idx * 0.12);
+    gainNode.gain.setValueAtTime(0.1 * ringtoneVolume, now + idx * 0.12);
     gainNode.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.2);
     
     osc.connect(filter);

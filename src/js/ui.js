@@ -11,8 +11,8 @@
  * - Тактильную отдачу (Haptic/Vibration) при входящем звонке
  */
 
-import { createRoom, joinRoom, cleanup, getState as getSignalingState } from './signaling.js';
-import { startCall, prepareToReceiveCall, acceptIncomingCall, hangUp, onConnectionStateChange, toggleMute } from './webrtc.js';
+import { createRoom, joinRoom, cleanup, getState as getSignalingState, onPeerPresenceChange } from './signaling.js';
+import { startCall, prepareToReceiveCall, acceptIncomingCall, hangUp, onConnectionStateChange, toggleMute, onQualityChange, setMicrophoneId } from './webrtc.js';
 import { log } from './utils.js';
 import { 
   playRingtone, 
@@ -20,7 +20,8 @@ import {
   playDialTone, 
   stopDialTone, 
   playConnectTone, 
-  playDisconnectTone 
+  playDisconnectTone,
+  setRingtoneVolume
 } from './audio-effects.js';
 
 // === Кэш DOM-элементов ===
@@ -41,6 +42,21 @@ let actionIncomingEl = null;
 let btnMuteEl = null;
 let historySectionEl = null;
 let historyListEl = null;
+
+// Новые элементы: Присутствие и Качество
+let peerStatusEl = null;
+let connQualityEl = null;
+let callMetaEl = null;
+
+// Настройки
+let btnSettingsEl = null;
+let settingsModalEl = null;
+let btnCloseSettingsEl = null;
+let selectMicEl = null;
+let rangeVolumeEl = null;
+let btnTestMicEl = null;
+let micMeterBarEl = null;
+let btnSaveSettingsEl = null;
 
 // === Внутреннее состояние UI ===
 let timerInterval = null;
@@ -71,6 +87,20 @@ export function initUI() {
   historySectionEl = document.getElementById('history-section');
   historyListEl = document.getElementById('history-list');
 
+  // Новые элементы
+  peerStatusEl = document.getElementById('peer-status');
+  connQualityEl = document.getElementById('conn-quality');
+  callMetaEl = document.getElementById('call-meta');
+
+  btnSettingsEl = document.getElementById('btn-settings');
+  settingsModalEl = document.getElementById('settings-modal');
+  btnCloseSettingsEl = document.getElementById('btn-close-settings');
+  selectMicEl = document.getElementById('select-mic');
+  rangeVolumeEl = document.getElementById('range-volume');
+  btnTestMicEl = document.getElementById('btn-test-mic');
+  micMeterBarEl = document.getElementById('mic-meter-bar');
+  btnSaveSettingsEl = document.getElementById('btn-save-settings');
+
   if (!appEl) {
     log('UI', '❌ Критическая ошибка: корневой элемент #app не найден.');
     return;
@@ -88,9 +118,36 @@ export function initUI() {
   btnMuteEl.addEventListener('click', _handleMuteClick);
   document.getElementById('btn-toggle-history').addEventListener('click', _handleToggleHistoryClick);
 
+  // Обработчики настроек
+  btnSettingsEl.addEventListener('click', _handleOpenSettingsClick);
+  btnCloseSettingsEl.addEventListener('click', _handleCloseSettingsClick);
+  btnSaveSettingsEl.addEventListener('click', _handleSaveSettingsClick);
+  btnTestMicEl.addEventListener('click', _handleTestMicClick);
+  rangeVolumeEl.addEventListener('input', (e) => {
+    setRingtoneVolume(parseFloat(e.target.value));
+  });
+
+  // Загрузка сохраненной громкости
+  const savedVolume = localStorage.getItem('zvonilka_ringtone_volume');
+  if (savedVolume !== null) {
+    const vol = parseFloat(savedVolume);
+    setRingtoneVolume(vol);
+    if (rangeVolumeEl) rangeVolumeEl.value = vol;
+  }
+
   // Подписка на статусы WebRTC
   onConnectionStateChange((state) => {
     _transitionToState(state);
+  });
+
+  // Подписка на изменение качества связи
+  onQualityChange((quality) => {
+    _handleQualityChange(quality);
+  });
+
+  // Подписка на онлайн-статус партнера
+  onPeerPresenceChange((isOnline) => {
+    _handlePeerPresenceChange(isOnline);
   });
 
   // Инициализируем начальный экран (idle)
@@ -140,6 +197,16 @@ function _transitionToState(state) {
     btnMuteEl.classList.remove('muted');
   }
 
+  // Сбрасываем отображение качества и присутствия
+  _hide(callMetaEl);
+  if (peerStatusEl) {
+    peerStatusEl.className = 'peer-status';
+    peerStatusEl.textContent = '● Не в сети';
+  }
+  if (connQualityEl) {
+    connQualityEl.textContent = '📶 Ожидание';
+  }
+
   // Добавляем соответствующий класс состояния
   const mappedClass = _mapStateToClass(state);
   appEl.classList.add(mappedClass);
@@ -170,6 +237,7 @@ function _transitionToState(state) {
       _updateText(roomCodeEl, sigState.roomId || '------');
       _hide(joinSectionEl);
       _hide(historySectionEl); // Скрываем историю во время звонка
+      _show(callMetaEl); // Показываем онлайн-статус и качество связи
       
       _hide(actionIdleEl);
       _show(actionActiveEl);
@@ -190,6 +258,7 @@ function _transitionToState(state) {
       _updateText(roomCodeEl, sigState.roomId || '------');
       _hide(joinSectionEl);
       _hide(historySectionEl);
+      _show(callMetaEl); // Показываем онлайн-статус и качество связи
       
       _hide(actionIdleEl);
       _show(actionActiveEl);
@@ -206,6 +275,7 @@ function _transitionToState(state) {
       _updateText(roomCodeEl, sigState.roomId || '------');
       _hide(joinSectionEl);
       _hide(historySectionEl);
+      _hide(callMetaEl);
       
       _hide(actionIdleEl);
       _hide(actionActiveEl);
@@ -214,6 +284,9 @@ function _transitionToState(state) {
       // Запускаем вибрацию и рингтон входящего звонка
       _startVibration();
       playRingtone();
+
+      // Показываем браузерное уведомление
+      _showNotification('Входящий вызов 📞', 'Мама звонит! Откройте приложение, чтобы ответить.');
       break;
 
     case 'failed':
@@ -222,6 +295,7 @@ function _transitionToState(state) {
       _show(roomBadgeEl);
       _hide(joinSectionEl);
       _hide(historySectionEl);
+      _hide(callMetaEl);
       _show(actionActiveEl);
       _addSignalLog('❌ Соединение не удалось установить или оборвалось.');
 
@@ -577,6 +651,266 @@ function _renderHistory() {
   } catch (err) {
     log('UI', `⚠️ Ошибка рендеринга истории: ${err.message}`);
     historyListEl.innerHTML = `<div class="history-item" style="color: var(--color-danger);">Ошибка чтения истории</div>`;
+  }
+}
+
+// ============================
+// Настройки (Settings Logic)
+// ============================
+
+let isMicTesting = false;
+let micTestingStream = null;
+let micTestingAudioCtx = null;
+let micTestingAnalyser = null;
+let micTestingRaf = null;
+
+/**
+ * Открывает окно настроек и запрашивает список микрофонов.
+ * @private
+ */
+async function _handleOpenSettingsClick() {
+  if (settingsModalEl) {
+    settingsModalEl.classList.remove('hidden');
+  }
+
+  // Запрашиваем устройства
+  try {
+    // Вначале запрашиваем доступ, чтобы браузер отдал названия девайсов
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioInputs = devices.filter(device => device.kind === 'audioinput');
+
+    if (selectMicEl) {
+      const savedMic = localStorage.getItem('zvonilka_microphone_id') || '';
+      
+      selectMicEl.innerHTML = audioInputs.map(device => {
+        const selected = device.deviceId === savedMic ? 'selected' : '';
+        return `<option value="${device.deviceId}" ${selected}>${device.label || 'Микрофон ' + device.deviceId.slice(0, 4)}</option>`;
+      }).join('');
+      
+      // Добавляем опцию "По умолчанию"
+      selectMicEl.insertAdjacentHTML('afterbegin', `<option value="" ${savedMic === '' ? 'selected' : ''}>По умолчанию</option>`);
+    }
+  } catch (err) {
+    log('UI', `⚠️ Не удалось получить список устройств: ${err.message}`);
+  }
+}
+
+/**
+ * Закрывает окно настроек и сбрасывает тест микрофона.
+ * @private
+ */
+function _handleCloseSettingsClick() {
+  if (settingsModalEl) {
+    settingsModalEl.classList.add('hidden');
+  }
+  _stopMicTesting();
+}
+
+/**
+ * Сохраняет настройки и закрывает окно.
+ * @private
+ */
+function _handleSaveSettingsClick() {
+  if (selectMicEl) {
+    const selectedMic = selectMicEl.value;
+    localStorage.setItem('zvonilka_microphone_id', selectedMic);
+    setMicrophoneId(selectedMic); // Задаем в WebRTC
+  }
+
+  if (rangeVolumeEl) {
+    const volume = parseFloat(rangeVolumeEl.value);
+    localStorage.setItem('zvonilka_ringtone_volume', String(volume));
+    setRingtoneVolume(volume);
+  }
+
+  log('UI', '✅ Настройки успешно сохранены.');
+  _handleCloseSettingsClick();
+}
+
+/**
+ * Запускает или останавливает индикацию громкости микрофона в настройках.
+ * @private
+ */
+async function _handleTestMicClick() {
+  if (isMicTesting) {
+    _stopMicTesting();
+    return;
+  }
+
+  try {
+    const deviceId = selectMicEl ? selectMicEl.value : '';
+    const constraints = {
+      audio: deviceId ? { deviceId: { exact: deviceId } } : true,
+      video: false
+    };
+
+    micTestingStream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    // Web Audio API анализатор
+    micTestingAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = micTestingAudioCtx.createMediaStreamSource(micTestingStream);
+    micTestingAnalyser = micTestingAudioCtx.createAnalyser();
+    micTestingAnalyser.fftSize = 256;
+    
+    source.connect(micTestingAnalyser);
+    
+    isMicTesting = true;
+    if (btnTestMicEl) {
+      btnTestMicEl.textContent = 'Остановить';
+      btnTestMicEl.classList.add('btn-action--danger');
+    }
+
+    const dataArray = new Uint8Array(micTestingAnalyser.frequencyBinCount);
+    
+    const updateMeter = () => {
+      if (!isMicTesting || !micTestingAnalyser) return;
+      
+      micTestingAnalyser.getByteFrequencyData(dataArray);
+      
+      // Считаем среднюю громкость
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+      }
+      const average = sum / dataArray.length;
+      
+      // Переводим в проценты шкалы
+      const percent = Math.min(100, Math.round((average / 128) * 100));
+      
+      if (micMeterBarEl) {
+        micMeterBarEl.style.width = `${percent}%`;
+      }
+      
+      micTestingRaf = requestAnimationFrame(updateMeter);
+    };
+
+    updateMeter();
+    log('UI', '🎤 Запущен тест микрофона.');
+
+  } catch (err) {
+    log('UI', `❌ Не удалось протестировать микрофон: ${err.message}`);
+    _stopMicTesting();
+  }
+}
+
+/**
+ * Останавливает тест микрофона.
+ * @private
+ */
+function _stopMicTesting() {
+  isMicTesting = false;
+  
+  if (micTestingRaf) {
+    cancelAnimationFrame(micTestingRaf);
+    micTestingRaf = null;
+  }
+  
+  if (micTestingStream) {
+    micTestingStream.getTracks().forEach(track => track.stop());
+    micTestingStream = null;
+  }
+  
+  if (micTestingAudioCtx) {
+    micTestingAudioCtx.close();
+    micTestingAudioCtx = null;
+  }
+  
+  micTestingAnalyser = null;
+
+  if (btnTestMicEl) {
+    btnTestMicEl.textContent = 'Проверить';
+    btnTestMicEl.classList.remove('btn-action--danger');
+  }
+
+  if (micMeterBarEl) {
+    micMeterBarEl.style.width = '0%';
+  }
+  log('UI', '🎤 Тест микрофона остановлен.');
+}
+
+// ============================
+// Индикаторы качества связи и статуса партнера
+// ============================
+
+/**
+ * Изменение качества WebRTC соединения.
+ * @private
+ * @param {object} quality
+ */
+function _handleQualityChange(quality) {
+  if (!connQualityEl) return;
+  
+  let icon = '📶';
+  let text = 'Ожидание';
+  let color = 'var(--text-muted)';
+
+  if (quality.status === 'excellent') {
+    icon = '🟢';
+    text = 'Отлично';
+    color = 'var(--color-success)';
+  } else if (quality.status === 'fair') {
+    icon = '🟡';
+    text = 'Средне';
+    color = 'var(--color-accent)';
+  } else if (quality.status === 'poor') {
+    icon = '🔴';
+    text = 'Плохо';
+    color = 'var(--color-danger)';
+  }
+
+  connQualityEl.innerHTML = `${icon} ${text} (${Math.round(quality.rtt)}мс)`;
+  connQualityEl.style.color = color;
+  connQualityEl.style.borderColor = color;
+}
+
+/**
+ * Изменение присутствия пира в комнате.
+ * @private
+ * @param {boolean} isOnline
+ */
+function _handlePeerPresenceChange(isOnline) {
+  if (!peerStatusEl) return;
+
+  if (isOnline) {
+    peerStatusEl.classList.add('online');
+    peerStatusEl.textContent = '● В сети';
+    _addSignalLog('🟢 Собеседник вошел в комнату (в сети).');
+  } else {
+    peerStatusEl.classList.remove('online');
+    peerStatusEl.textContent = '● Не в сети';
+    _addSignalLog('⚪ Собеседник покинул комнату (не в сети).');
+  }
+}
+
+// ============================
+// Браузерные Push-уведомления
+// ============================
+
+/**
+ * Запрашивает права на отправку уведомлений и показывает его.
+ * @private
+ * @param {string} title
+ * @param {string} body
+ */
+function _showNotification(title, body) {
+  if (!('Notification' in window)) return;
+
+  if (Notification.permission === 'granted') {
+    new Notification(title, {
+      body,
+      icon: 'assets/icons/icon-192.png'
+    });
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        new Notification(title, {
+          body,
+          icon: 'assets/icons/icon-192.png'
+        });
+      }
+    });
   }
 }
 

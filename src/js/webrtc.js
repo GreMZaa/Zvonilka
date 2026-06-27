@@ -13,7 +13,7 @@
  */
 
 import { ICE_SERVERS, CONNECTION_TIMEOUT_MS } from './config.js';
-import { sendSignal, onSignal, cleanup as signalingCleanup, getState as getSignalingState } from './signaling.js';
+import { sendSignal, onSignal, cleanup as signalingCleanup, getState as getSignalingState, logErrorToSupabase } from './signaling.js';
 import { log } from './utils.js';
 
 // === Внутреннее состояние модуля ===
@@ -33,11 +33,56 @@ let remoteAudioElement = null;
 /** @type {number | null} */
 let connectionTimeoutTimer = null;
 
+/** @type {number | null} Интервал мониторинга статистики */
+let statsInterval = null;
+
+/** @type {string | null} Выбранный ID микрофона */
+let selectedMicrophoneId = null;
+
+/** @type {boolean} Принудительное использование TURN-реле (relay) */
+let forceRelay = false;
+
 /** @type {Array<function>} Подписчики на изменение статуса соединения WebRTC */
 const stateListeners = [];
 
+/** @type {Array<function>} Подписчики на изменение качества соединения WebRTC */
+const qualityListeners = [];
+
 /** @type {function} Отписка от сигналинга */
 let unsubscribeSignaling = null;
+
+/** @type {MediaRecorder | null} Регистратор резервного аудиоканала */
+let fallbackMediaRecorder = null;
+
+/** @type {boolean} Активен ли резервный аудиоканал */
+let isFallbackActive = false;
+
+/** @type {number | null} Таймер переключения на резервный канал */
+let fallbackTimeoutTimer = null;
+
+/**
+ * Подписка на изменение качества WebRTC соединения.
+ * @param {function({ status: 'excellent' | 'fair' | 'poor', rtt: number, packetLoss: number }): void} callback
+ * @returns {function} функция отписки
+ */
+export function onQualityChange(callback) {
+  if (typeof callback !== 'function') return () => {};
+  qualityListeners.push(callback);
+  return () => {
+    const idx = qualityListeners.indexOf(callback);
+    if (idx !== -1) qualityListeners.splice(idx, 1);
+  };
+}
+
+/**
+ * Задает выбранный микрофон для будущих вызовов.
+ * @param {string} deviceId
+ */
+export function setMicrophoneId(deviceId) {
+  selectedMicrophoneId = deviceId;
+  log('WebRTC', `🎤 Задан микрофон: ${deviceId}`);
+}
+
 
 // ============================
 // 1. Инициализация
@@ -99,14 +144,27 @@ async function _acquireMicrophone() {
     return localStream;
   }
 
-  log('WebRTC', '🎤 Запрос доступа к микрофону...');
+  log('WebRTC', `🎤 Запрос доступа к микрофону (${selectedMicrophoneId ? 'ID: ' + selectedMicrophoneId : 'по умолчанию'})...`);
+  
+  const constraints = {
+    audio: selectedMicrophoneId ? { deviceId: { exact: selectedMicrophoneId } } : true,
+    video: false
+  };
+
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    localStream = await navigator.mediaDevices.getUserMedia(constraints);
     log('WebRTC', '✅ Доступ к микрофону получен.');
     return localStream;
   } catch (err) {
     log('WebRTC', `❌ Ошибка доступа к микрофону: ${err.message}`);
     _notifyStateChange('permission-denied');
+    
+    // Отправляем диагностику на сервер
+    logErrorToSupabase('error', `Microphone access denied: ${err.message}`, {
+      deviceId: selectedMicrophoneId,
+      errorName: err.name
+    });
+    
     throw err;
   }
 }
@@ -121,11 +179,15 @@ async function _acquireMicrophone() {
  * @param {MediaStream} stream
  */
 function _createPeerConnection(stream) {
-  log('WebRTC', '⚙️ Создание RTCPeerConnection...');
+  log('WebRTC', `⚙️ Создание RTCPeerConnection (Relay-only: ${forceRelay ? 'Да' : 'Нет'})...`);
   
-  peerConnection = new RTCPeerConnection({
-    iceServers: ICE_SERVERS
-  });
+  const config = {
+    iceServers: ICE_SERVERS,
+    // Если включено принудительное реле, используем только TURN
+    iceTransportPolicy: forceRelay ? 'relay' : 'all'
+  };
+
+  peerConnection = new RTCPeerConnection(config);
 
   // Добавление локальных треков
   stream.getTracks().forEach(track => {
@@ -167,21 +229,243 @@ function _createPeerConnection(stream) {
 
     if (state === 'connected') {
       _clearConnectionTimeout();
-    } else if (state === 'failed' || state === 'closed') {
+      if (fallbackTimeoutTimer) {
+        clearTimeout(fallbackTimeoutTimer);
+        fallbackTimeoutTimer = null;
+      }
+      _startQualityMonitoring(); // Запуск мониторинга качества
+    } else if (state === 'failed' || state === 'closed' || state === 'disconnected') {
       _clearConnectionTimeout();
-      // Автоматический сброс при сбое
-      hangUp().catch(err => log('WebRTC', `Ошибка при автосбросе: ${err.message}`));
+      if (fallbackTimeoutTimer) {
+        clearTimeout(fallbackTimeoutTimer);
+        fallbackTimeoutTimer = null;
+      }
+      _stopQualityMonitoring(); // Остановка мониторинга качества
+      
+      if (state === 'failed') {
+        logErrorToSupabase('error', 'WebRTC connection state failed', {
+          forceRelay,
+          iceConnectionState: peerConnection ? peerConnection.iceConnectionState : 'closed'
+        });
+        
+        // Автоматический сброс при сбое
+        hangUp().catch(err => log('WebRTC', `Ошибка при автосбросе: ${err.message}`));
+      }
     }
   };
 
   // Вспомогательный слушатель для отслеживания старых браузеров
   peerConnection.oniceconnectionstatechange = () => {
+    if (!peerConnection) return;
     log('WebRTC', `❄️ ICE Connection State: ${peerConnection.iceConnectionState}`);
     if (peerConnection.iceConnectionState === 'failed') {
       _notifyStateChange('failed');
+      _stopQualityMonitoring();
+      logErrorToSupabase('error', 'ICE connection state failed', { forceRelay });
       hangUp().catch(err => log('WebRTC', `Ошибка при автосбросе: ${err.message}`));
     }
   };
+}
+
+// ============================
+// 4.1 Мониторинг качества связи
+// ============================
+
+/**
+ * Запускает сбор статистики WebRTC для индикации качества.
+ * @private
+ */
+function _startQualityMonitoring() {
+  _stopQualityMonitoring();
+  
+  let lastPacketsLost = 0;
+  let poorQualitySeconds = 0;
+
+  statsInterval = setInterval(async () => {
+    if (!peerConnection) return;
+    
+    try {
+      const stats = await peerConnection.getStats();
+      let rtt = 0;
+      let jitter = 0;
+      let packetsLost = 0;
+
+      stats.forEach(report => {
+        if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+          packetsLost = report.packetsLost || 0;
+          jitter = (report.jitter || 0) * 1000;
+        }
+        if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+          rtt = (report.currentRoundTripTime || 0) * 1000;
+        }
+      });
+
+      const deltaLost = Math.max(0, packetsLost - lastPacketsLost);
+      lastPacketsLost = packetsLost;
+
+      let status = 'excellent';
+      if (rtt > 250 || deltaLost > 5 || jitter > 30) {
+        status = 'poor';
+        poorQualitySeconds += 2;
+      } else if (rtt > 100 || deltaLost > 2 || jitter > 15) {
+        status = 'fair';
+        poorQualitySeconds = 0;
+      } else {
+        poorQualitySeconds = 0;
+      }
+
+      // Оповещаем подписчиков
+      qualityListeners.forEach(listener => {
+        try {
+          listener({ status, rtt, packetLoss: deltaLost, jitter });
+        } catch (e) {}
+      });
+
+      // Переключаемся на TURN при плохом качестве
+      if (poorQualitySeconds >= 10 && !forceRelay) {
+        log('WebRTC', '⚠️ Качество связи плохое. Переключаемся на TURN...');
+        logErrorToSupabase('warn', 'Forced switch to TURN due to low WebRTC quality', { rtt, deltaLost, jitter });
+        _stopQualityMonitoring();
+        forceRelay = true;
+        _reconnectWithForcedRelay();
+      }
+
+    } catch (err) {
+      log('WebRTC', `Ошибка сбора статистики: ${err.message}`);
+    }
+  }, 2000);
+}
+
+/**
+ * Останавливает мониторинг статистики.
+ * @private
+ */
+function _stopQualityMonitoring() {
+  if (statsInterval) {
+    clearInterval(statsInterval);
+    statsInterval = null;
+  }
+}
+
+/**
+ * Пересоздает PeerConnection с флагом принудительного TURN.
+ * @private
+ */
+async function _reconnectWithForcedRelay() {
+  log('WebRTC', '🔄 Перезапуск PeerConnection с Relay-only...');
+  
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+
+  const { role } = getSignalingState();
+  if (role === 'caller') {
+    _createPeerConnection(localStream);
+    const offer = await peerConnection.createOffer({ offerToReceiveAudio: true });
+    await peerConnection.setLocalDescription(offer);
+    await sendSignal('offer', { sdp: offer.sdp, forcedRelay: true });
+  } else {
+    _createPeerConnection(localStream);
+  }
+}
+
+// ============================
+// 4.2 Резервный аудиоканал (Fallback Audio)
+// ============================
+
+/**
+ * Запускает резервную передачу аудио через Supabase Realtime Broadcast.
+ * @private
+ */
+async function _startFallbackAudio() {
+  if (isFallbackActive) return;
+  isFallbackActive = true;
+  
+  log('WebRTC', '📻 Запуск резервного аудиоканала (Supabase Broadcast)...');
+  logErrorToSupabase('info', 'Switched to fallback audio channel due to WebRTC block');
+  
+  // Уведомляем интерфейс, что связь установлена через резервный канал
+  _notifyStateChange('connected');
+
+  try {
+    const stream = await _acquireMicrophone();
+    
+    // Инициализируем MediaRecorder. Выбираем поддерживаемый аудиокодек
+    let options = { mimeType: 'audio/webm;codecs=opus' };
+    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+      options = { mimeType: 'audio/mp4' }; // Для iOS Safari
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options = {}; // По умолчанию
+      }
+    }
+
+    fallbackMediaRecorder = new MediaRecorder(stream, options);
+    
+    fallbackMediaRecorder.ondataavailable = async (event) => {
+      if (event.data && event.data.size > 0 && isFallbackActive) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result.split(',')[1];
+          // Отправляем чанк через Supabase
+          sendSignal('fallback-audio', { data: base64data }).catch(e => {
+            log('WebRTC', `⚠️ Ошибка отправки аудио-чанка: ${e.message}`);
+          });
+        };
+        reader.readAsDataURL(event.data);
+      }
+    };
+
+    // Нарезаем аудио на чанки по 500мс
+    fallbackMediaRecorder.start(500);
+    log('WebRTC', '📻 Резервный аудиоканал запущен.');
+
+  } catch (err) {
+    log('WebRTC', `❌ Ошибка запуска резервного аудио: ${err.message}`);
+    isFallbackActive = false;
+  }
+}
+
+/**
+ * Останавливает резервную передачу аудио.
+ * @private
+ */
+function _stopFallbackAudio() {
+  isFallbackActive = false;
+  
+  if (fallbackTimeoutTimer) {
+    clearTimeout(fallbackTimeoutTimer);
+    fallbackTimeoutTimer = null;
+  }
+
+  if (fallbackMediaRecorder) {
+    try {
+      fallbackMediaRecorder.stop();
+    } catch (e) {}
+    fallbackMediaRecorder = null;
+  }
+  log('WebRTC', '📻 Резервный аудиоканал остановлен.');
+}
+
+/**
+ * Воспроизводит полученный резервный чанк аудио.
+ * @private
+ * @param {string} base64data
+ */
+function _playFallbackAudioChunk(base64data) {
+  if (!base64data) return;
+  
+  try {
+    const audioUrl = `data:audio/webm;base64,${base64data}`;
+    const audio = new Audio(audioUrl);
+    const savedVolume = localStorage.getItem('zvonilka_ringtone_volume') || '0.5';
+    audio.volume = parseFloat(savedVolume);
+    audio.play().catch(err => {
+      // Игнорируем автовоспроизведение
+    });
+  } catch (err) {
+    log('WebRTC', `⚠️ Ошибка воспроизведения чанка: ${err.message}`);
+  }
 }
 
 // ============================
@@ -205,6 +489,7 @@ export async function startCall() {
 
     // Установка таймаута на соединение
     _startConnectionTimeout();
+    fallbackTimeoutTimer = setTimeout(_startFallbackAudio, 15000);
 
     // Создание предложения (offer)
     log('WebRTC', 'Создание SDP Offer...');
@@ -250,6 +535,7 @@ export async function prepareToReceiveCall() {
  */
 export async function acceptIncomingCall(offerPayload = null) {
   _notifyStateChange('connecting');
+  fallbackTimeoutTimer = setTimeout(_startFallbackAudio, 15000);
 
   const payload = offerPayload || pendingOffer;
   if (!payload) {
@@ -304,10 +590,23 @@ function _subscribeToSignalingEvents() {
 
     try {
       if (signal.type === 'offer' && role === 'callee') {
-        // Получили предложение от звонящего
-        log('WebRTC', '📥 Получен offer от caller. Сохраняем и переключаем в статус incoming...');
+        log('WebRTC', '📥 Получен offer от caller.');
         pendingOffer = signal.payload;
-        _notifyStateChange('incoming');
+        
+        // Проверяем, не является ли этот offer запросом на переподключение через TURN
+        if (signal.payload.forcedRelay) {
+          log('WebRTC', '🔄 Переподключение через TURN (Relay-only) по запросу от caller...');
+          forceRelay = true;
+          if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+          }
+          // Автоматически отвечаем на пересозданный offer
+          await acceptIncomingCall(signal.payload);
+        } else {
+          // Обычный первый вызов — показываем входящий экран
+          _notifyStateChange('incoming');
+        }
       } 
       else if (signal.type === 'answer' && role === 'caller') {
         // Получили ответ от принимающего
@@ -326,6 +625,13 @@ function _subscribeToSignalingEvents() {
           await peerConnection.addIceCandidate(new RTCIceCandidate(signal.payload));
         } else {
           log('WebRTC', '⚠️ Получен ICE-кандидат, но Remote Description еще не установлен. Пропускаем.');
+        }
+      }
+      else if (signal.type === 'fallback-audio') {
+        _playFallbackAudioChunk(signal.payload.data);
+        if (!isFallbackActive) {
+          log('WebRTC', '📻 Собеседник перешел на резервный канал. Переключаемся тоже...');
+          _startFallbackAudio();
         }
       }
       else if (signal.type === 'hangup') {
@@ -349,7 +655,10 @@ function _subscribeToSignalingEvents() {
 export async function hangUp(sendHangupSignal = true) {
   log('WebRTC', '📴 Завершение звонка...');
   _clearConnectionTimeout();
+  _stopQualityMonitoring(); // Останавливаем мониторинг качества
+  _stopFallbackAudio(); // Останавливаем резервное аудиовещание
   pendingOffer = null;
+  forceRelay = false; // Сбрасываем принудительный TURN для будущих звонков
 
   // 1. Отправить сигнал hangup удаленному пиру, если требуется
   if (sendHangupSignal && getSignalingState().isConnected) {

@@ -45,11 +45,16 @@
         <span class="logo__icon">✨</span>
         <span class="logo__text">ЗВОНИЛКА</span>
       </div>
-      <div id="room-badge" class="room-badge hidden">
-        <span class="room-badge__label">Код:</span>
-        <code id="room-code" class="room-badge__code">------</code>
-        <button id="btn-copy" class="room-badge__copy" aria-label="Копировать код">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      <div class="header-controls">
+        <div id="room-badge" class="room-badge hidden">
+          <span class="room-badge__label">Код:</span>
+          <code id="room-code" class="room-badge__code">------</code>
+          <button id="btn-copy" class="room-badge__copy" aria-label="Копировать код">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </button>
+        </div>
+        <button id="btn-settings" class="btn-settings-toggle" aria-label="Настройки">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         </button>
       </div>
     </header>
@@ -61,6 +66,12 @@
       <div class="status-container">
         <h2 id="call-status" class="status-text">Готов к звонку</h2>
         <div id="call-timer" class="timer-text hidden">00:00</div>
+        
+        <!-- Quality and online badges -->
+        <div id="call-meta" class="call-meta hidden">
+          <span id="peer-status" class="peer-status">● Не в сети</span>
+          <span id="conn-quality" class="conn-quality">📶 Ожидание</span>
+        </div>
       </div>
 
       <!-- Interactive Breathing Fluid Orb / Visualizer -->
@@ -152,6 +163,46 @@
     <div id="debug-log-wrapper" class="debug-log-wrapper collapsed">
       <button id="btn-toggle-log" class="btn-toggle-log">Детали соединения ▾</button>
       <div id="signal-log" class="signal-log"></div>
+    </div>
+
+    <!-- Модальное окно настроек -->
+    <div id="settings-modal" class="settings-modal hidden">
+      <div class="settings-modal__content">
+        <div class="settings-modal__header">
+          <h3>⚙️ Настройки</h3>
+          <button id="btn-close-settings" class="btn-close-settings">&times;</button>
+        </div>
+        <div class="settings-modal__body">
+          
+          <!-- Выбор микрофона -->
+          <div class="settings-group">
+            <label for="select-mic" class="settings-label">Микрофон:</label>
+            <select id="select-mic" class="settings-select">
+              <option value="">По умолчанию</option>
+            </select>
+          </div>
+
+          <!-- Регулировка громкости -->
+          <div class="settings-group">
+            <label for="range-volume" class="settings-label">Громкость рингтона:</label>
+            <input type="range" id="range-volume" class="settings-range" min="0" max="1" step="0.1" value="0.5">
+          </div>
+
+          <!-- Тестирование микрофона -->
+          <div class="settings-group">
+            <label class="settings-label">Проверка микрофона:</label>
+            <div class="mic-test-container">
+              <button id="btn-test-mic" class="btn-action btn-action--secondary btn-action--small">Проверить</button>
+              <div class="mic-meter">
+                <div id="mic-meter-bar" class="mic-meter-bar"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Кнопка сохранения -->
+          <button id="btn-save-settings" class="btn-main btn-main--small" style="margin-top: 15px; padding: 12px; font-size: 0.95rem;">Сохранить</button>
+        </div>
+      </div>
     </div>
 
   </div>
