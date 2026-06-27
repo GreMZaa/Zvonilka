@@ -24,6 +24,9 @@ let peerConnection = null;
 /** @type {MediaStream | null} */
 let localStream = null;
 
+/** @type {object | null} Пакет входящего предложения */
+let pendingOffer = null;
+
 /** @type {HTMLAudioElement | null} */
 let remoteAudioElement = null;
 
@@ -243,10 +246,17 @@ export async function prepareToReceiveCall() {
 
 /**
  * Отвечает на входящий вызов (посылает Answer).
- * @param {object} offerPayload - SDP входящего предложения
+ * @param {object|null} offerPayload - SDP входящего предложения (если null, используется сохраненный pendingOffer)
  */
-export async function acceptIncomingCall(offerPayload) {
+export async function acceptIncomingCall(offerPayload = null) {
   _notifyStateChange('connecting');
+
+  const payload = offerPayload || pendingOffer;
+  if (!payload) {
+    log('WebRTC', '❌ Ошибка: нет входящего предложения для ответа.');
+    _notifyStateChange('failed');
+    return;
+  }
 
   try {
     const stream = await _acquireMicrophone();
@@ -256,7 +266,7 @@ export async function acceptIncomingCall(offerPayload) {
     // Установка удаленного описания (Offer)
     const sessionDescription = new RTCSessionDescription({
       type: 'offer',
-      sdp: offerPayload.sdp
+      sdp: payload.sdp
     });
     
     await peerConnection.setRemoteDescription(sessionDescription);
@@ -295,8 +305,9 @@ function _subscribeToSignalingEvents() {
     try {
       if (signal.type === 'offer' && role === 'callee') {
         // Получили предложение от звонящего
-        log('WebRTC', '📥 Получен offer от caller. Автоматически применяем...');
-        await acceptIncomingCall(signal.payload);
+        log('WebRTC', '📥 Получен offer от caller. Сохраняем и переключаем в статус incoming...');
+        pendingOffer = signal.payload;
+        _notifyStateChange('incoming');
       } 
       else if (signal.type === 'answer' && role === 'caller') {
         // Получили ответ от принимающего
@@ -338,6 +349,7 @@ function _subscribeToSignalingEvents() {
 export async function hangUp(sendHangupSignal = true) {
   log('WebRTC', '📴 Завершение звонка...');
   _clearConnectionTimeout();
+  pendingOffer = null;
 
   // 1. Отправить сигнал hangup удаленному пиру, если требуется
   if (sendHangupSignal && getSignalingState().isConnected) {

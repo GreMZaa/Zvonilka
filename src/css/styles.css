@@ -1,40 +1,52 @@
 /**
- * styles.css — Основные стили приложения
+ * styles.css — Премиальный дизайн-код (Aesthetic: Refined Bio-Minimalism)
  *
- * Структура:
- * 1. CSS-переменные (дизайн-токены)
- * 2. Сброс и базовые стили
- * 3. Экраны
- * 4. Кнопки
- * 5. Формы
- * 6. Лог сигналов
- * 7. Информация о комнате
+ * Особенности:
+ * - Obsidian Slate тёмная тема
+ * - Динамические органические градиенты и свечения (ambient-glow)
+ * - Стекломорфизм (backdrop-filter)
+ * - Крупная, контрастная типографика (Plus Jakarta Sans + Space Grotesk)
+ * - Удобные, осязаемые элементы управления (поддержка Safe Area для iOS/PWA)
  */
 
-/* === 1. Дизайн-токены === */
+/* === 1. Переменные и Дизайн-Токены === */
 :root {
-  --color-primary: #6366F1;
-  --color-primary-hover: #4F46E5;
-  --color-primary-glow: rgba(99, 102, 241, 0.3);
+  /* Цветовая палитра */
+  --bg-color: #060913;
+  --panel-bg: rgba(15, 23, 42, 0.45);
+  --panel-border: rgba(255, 255, 255, 0.06);
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  
+  /* Цвета состояний */
+  --color-accent: #00F2FE;
+  --color-accent-rgb: 0, 242, 254;
   --color-success: #10B981;
-  --color-success-hover: #059669;
-  --color-danger: #EF4444;
-  --color-danger-hover: #DC2626;
-  --color-bg: #0F172A;
-  --color-surface: #1E293B;
-  --color-surface-hover: #334155;
-  --color-border: #334155;
-  --color-text: #F8FAFC;
-  --color-text-muted: #94A3B8;
-  --color-text-dim: #64748B;
-  --radius: 16px;
-  --radius-sm: 8px;
+  --color-success-rgb: 16, 185, 129;
+  --color-danger: #FF3366;
+  --color-danger-rgb: 255, 51, 102;
+  
+  /* Градиенты по умолчанию (Idle) */
+  --gradient-start: #00F2FE;
+  --gradient-end: #4FACFE;
+  --glow-opacity: 0.15;
+
+  /* Шрифты */
+  --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-ui: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  /* Интервалы и радиусы */
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
   --radius-full: 9999px;
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --transition: 0.2s ease;
+  
+  --transition-smooth: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: all 0.15s ease;
 }
 
-/* === 2. Сброс === */
+/* === 2. Базовые стили и Сброс === */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -42,206 +54,600 @@
 }
 
 body {
-  font-family: var(--font-family);
-  background: var(--color-bg);
-  color: var(--color-text);
+  font-family: var(--font-ui);
+  background-color: var(--bg-color);
+  color: var(--text-primary);
   min-height: 100dvh;
+  min-height: 100svh;
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 20px;
+  align-items: center;
+  overflow: hidden;
+  padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+  position: relative;
   -webkit-font-smoothing: antialiased;
 }
 
-#app {
+/* === 3. Фоновые эффекты свечения === */
+.ambient-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  max-width: 400px;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
 }
 
-/* === 3. Экраны === */
-.screen {
+.glow-orb {
+  position: absolute;
+  border-radius: var(--radius-full);
+  filter: blur(140px);
+  opacity: var(--glow-opacity);
+  transition: var(--transition-smooth);
+}
+
+.glow-orb--1 {
+  top: -10%;
+  left: -20%;
+  width: 70%;
+  height: 50%;
+  background: radial-gradient(circle, var(--gradient-start) 0%, transparent 80%);
+}
+
+.glow-orb--2 {
+  bottom: -10%;
+  right: -20%;
+  width: 70%;
+  height: 50%;
+  background: radial-gradient(circle, var(--gradient-end) 0%, transparent 80%);
+}
+
+/* === 4. Контейнер приложения === */
+.app-container {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  height: 100dvh;
+  height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 40px);
+  max-height: 840px;
+  background: rgba(10, 15, 30, 0.6);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  padding: 30px;
+  z-index: 10;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+/* === 5. Шапка (Header) === */
+.app-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 24px;
-  text-align: center;
-  animation: fadeIn 0.3s ease;
-}
-
-.screen__title {
-  font-size: 2rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.screen__subtitle {
-  color: var(--color-text-muted);
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-.screen__actions {
   width: 100%;
+}
+
+.logo {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.screen__join {
-  width: 100%;
-  margin-top: 8px;
-}
-
-.screen__label {
-  color: var(--color-text-dim);
-  font-size: 0.85rem;
-  margin-bottom: 10px;
-}
-
-.screen__status {
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-  min-height: 1.4em;
-}
-
-/* === 4. Кнопки === */
-.btn {
-  padding: 14px 28px;
-  border: none;
-  border-radius: var(--radius);
-  font-family: var(--font-family);
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.btn:active {
-  transform: scale(0.97);
-}
-
-.btn--primary {
-  background: var(--color-primary);
-  color: white;
-  width: 100%;
-  padding: 18px;
-  font-size: 1.1rem;
-  box-shadow: 0 4px 24px var(--color-primary-glow);
-}
-
-.btn--primary:hover {
-  background: var(--color-primary-hover);
-  box-shadow: 0 6px 32px var(--color-primary-glow);
-}
-
-.btn--secondary {
-  background: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
-.btn--secondary:hover {
-  background: var(--color-surface-hover);
-}
-
-.btn--danger {
-  background: var(--color-danger);
-  color: white;
-  width: 100%;
-  padding: 16px;
-}
-
-.btn--danger:hover {
-  background: var(--color-danger-hover);
-}
-
-.btn--small {
-  padding: 6px 10px;
-  font-size: 0.85rem;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
-.btn--small:hover {
-  background: var(--color-surface-hover);
-}
-
-/* === 5. Формы === */
-.join-form {
-  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.input {
+.logo__icon {
+  font-size: 1.2rem;
+  filter: drop-shadow(0 0 10px var(--gradient-start));
+  animation: logoSpin 12s linear infinite;
+}
+
+.logo__text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.25em;
+  background: linear-gradient(135deg, var(--text-primary) 30%, var(--text-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Код комнаты */
+.room-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  transition: var(--transition-fast);
+}
+
+.room-badge:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.room-badge__label {
+  color: var(--text-muted);
+}
+
+.room-badge__code {
+  font-weight: 600;
+  color: var(--gradient-start);
+  letter-spacing: 0.05em;
+}
+
+.room-badge__copy {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: var(--transition-fast);
+  padding: 2px;
+}
+
+.room-badge__copy:hover {
+  color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+.room-badge__copy:active {
+  transform: scale(0.9);
+}
+
+/* === 6. Главная область (Main) === */
+.app-main {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+  width: 100%;
+}
+
+/* Текст статуса */
+.status-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.status-text {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.8rem;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  transition: var(--transition-smooth);
+}
+
+.timer-text {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 1.25rem;
+  letter-spacing: 0.05em;
+  color: var(--gradient-start);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--panel-border);
+  animation: pulseTimer 2s infinite ease-in-out;
+}
+
+/* === 7. Органика и визуализация (Orb & Rings) === */
+.visualizer-container {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 10px 0;
+}
+
+/* Концентрические кольца пульсации */
+.pulse-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--gradient-start);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.6);
+  transition: border-color 0.8s ease;
+}
+
+/* Стилизация внутренней живой сферы */
+.fluid-orb-wrapper {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 5;
+}
+
+.fluid-orb {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: var(--transition-smooth);
+  filter: drop-shadow(0 10px 30px rgba(var(--color-accent-rgb), 0.35));
+}
+
+.fluid-orb svg {
+  width: 100%;
+  height: 100%;
+  transition: var(--transition-smooth);
+}
+
+.fluid-orb svg path {
+  transition: var(--transition-smooth);
+  animation: morphingOrb 15s ease-in-out infinite alternate;
+}
+
+.orb-icon {
+  font-size: 3rem;
+  z-index: 10;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
+  transition: var(--transition-smooth);
+}
+
+/* === 8. Форма ввода (Join Section) === */
+.join-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: var(--transition-smooth);
+}
+
+.join-section__title {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.join-control {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--panel-border);
+  padding: 6px;
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+}
+
+.join-control:focus-within {
+  border-color: rgba(var(--color-accent-rgb), 0.3);
+  box-shadow: 0 0 20px rgba(var(--color-accent-rgb), 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.input-room {
+  flex: 1;
+  background: none;
+  border: none;
   padding: 12px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-family: var(--font-family);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
   font-size: 1rem;
+  font-weight: 500;
   outline: none;
-  transition: border-color var(--transition);
+  letter-spacing: 0.05em;
 }
 
-.input:focus {
-  border-color: var(--color-primary);
+.input-room::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
 }
 
-.input::placeholder {
-  color: var(--color-text-dim);
+/* === 9. Кнопки и Управление === */
+.btn-action {
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
 }
 
-/* === 6. Лог сигналов === */
+.btn-action--secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-action--secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-action--secondary:active {
+  transform: scale(0.96);
+}
+
+/* Нижняя панель действий */
+.app-footer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 90px;
+}
+
+.action-group {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  animation: fadeIn 0.4s ease;
+}
+
+/* Главная кнопка «Позвонить маме» */
+.btn-main {
+  width: 100%;
+  max-width: 320px;
+  padding: 20px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+  color: #000;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(var(--color-accent-rgb), 0.3);
+  transition: var(--transition-smooth);
+}
+
+.btn-main:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(var(--color-accent-rgb), 0.45);
+}
+
+.btn-main:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* Круглые кнопки управления (Answer, Hangup) */
+.btn-round {
+  width: 74px;
+  height: 74px;
+  border-radius: var(--radius-full);
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  color: white;
+  transition: var(--transition-smooth);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.btn-round:hover {
+  transform: scale(1.08) translateY(-2px);
+}
+
+.btn-round:active {
+  transform: scale(0.95);
+}
+
+.btn-round--success {
+  background: linear-gradient(135deg, #10B981, #059669);
+  box-shadow: 0 10px 30px rgba(var(--color-success-rgb), 0.35);
+}
+
+.btn-round--success:hover {
+  box-shadow: 0 15px 35px rgba(var(--color-success-rgb), 0.5);
+}
+
+.btn-round--danger {
+  background: linear-gradient(135deg, #FF3366, #E11D48);
+  box-shadow: 0 10px 30px rgba(var(--color-danger-rgb), 0.35);
+}
+
+.btn-round--danger:hover {
+  box-shadow: 0 15px 35px rgba(var(--color-danger-rgb), 0.5);
+}
+
+/* === 10. Дебаг-Лог / Подробности соединения === */
+.debug-log-wrapper {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(6, 9, 19, 0.95);
+  border-top: 1px solid var(--panel-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  transition: var(--transition-smooth);
+}
+
+.debug-log-wrapper.collapsed {
+  transform: translateY(100%);
+  bottom: 36px; /* Оставляем видна кнопку управления */
+}
+
+.debug-log-wrapper.collapsed .signal-log {
+  max-height: 0;
+  padding: 0;
+  border: none;
+}
+
+.btn-toggle-log {
+  background: rgba(255, 255, 255, 0.02);
+  border: none;
+  border-bottom: 1px solid var(--panel-border);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  padding: 8px;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  transition: var(--transition-fast);
+}
+
+.btn-toggle-log:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .signal-log {
   width: 100%;
-  max-height: 200px;
+  max-height: 180px;
   overflow-y: auto;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: 12px;
-  text-align: left;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .signal-log__entry {
-  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 0.78rem;
-  color: var(--color-text-muted);
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  font-family: 'Consolas', 'SF Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  padding-bottom: 4px;
 }
 
-.signal-log__entry:last-child {
-  border-bottom: none;
+/* === 11. Переходы состояний и Визуальные темы === */
+
+/* Утилитарные классы */
+.hidden {
+  display: none !important;
 }
 
-/* === 7. Информация о комнате === */
-.room-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  width: 100%;
+/* State: Calling (В процессе вызова) */
+.state-calling {
+  --gradient-start: #FBBF24;
+  --gradient-end: #F59E0B;
+  --color-accent-rgb: 245, 158, 11;
 }
 
-.room-info__label {
-  color: var(--color-text-dim);
-  font-size: 0.85rem;
+.state-calling .pulse-ring--1 {
+  animation: ripple 3s infinite linear;
+}
+.state-calling .pulse-ring--2 {
+  animation: ripple 3s infinite linear 1s;
+}
+.state-calling .pulse-ring--3 {
+  animation: ripple 3s infinite linear 2s;
 }
 
-.room-info__code {
-  flex: 1;
-  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--color-primary);
-  letter-spacing: 0.1em;
+.state-calling .fluid-orb-wrapper {
+  animation: bounceOrb 2.5s infinite ease-in-out;
+}
+
+/* State: Connected (На связи) */
+.state-connected {
+  --gradient-start: #10B981;
+  --gradient-end: #059669;
+  --color-accent-rgb: 16, 185, 129;
+}
+
+.state-connected .pulse-ring {
+  border-color: var(--color-success);
+}
+.state-connected .pulse-ring--1 {
+  animation: pulseRings 2.5s infinite ease-out;
+}
+.state-connected .pulse-ring--2 {
+  animation: pulseRings 2.5s infinite ease-out 1.25s;
+}
+
+.state-connected .fluid-orb {
+  filter: drop-shadow(0 15px 40px rgba(var(--color-success-rgb), 0.5));
+}
+
+.state-connected .fluid-orb svg path {
+  animation: morphingOrbConnected 4s ease-in-out infinite alternate;
+}
+
+/* State: Incoming (Входящий вызов) */
+.state-incoming {
+  --gradient-start: #8B5CF6;
+  --gradient-end: #6366F1;
+  --color-accent-rgb: 99, 102, 241;
+}
+
+.state-incoming .pulse-ring {
+  border-color: #8B5CF6;
+}
+.state-incoming .pulse-ring--1 {
+  animation: ripple 2s infinite ease-out;
+}
+.state-incoming .pulse-ring--2 {
+  animation: ripple 2s infinite ease-out 1s;
+}
+.state-incoming .fluid-orb-wrapper {
+  animation: bounceOrb 1.2s infinite ease-in-out;
+}
+
+/* State: Error / Denied */
+.state-failed, .state-denied {
+  --gradient-start: #EF4444;
+  --gradient-end: #DC2626;
+  --color-accent-rgb: 239, 68, 68;
+}
+
+.state-failed .fluid-orb-wrapper, .state-denied .fluid-orb-wrapper {
+  animation: shakeOrb 0.5s ease-in-out;
+}
+
+/* Адаптивная верстка под маленькие экраны (например, iPhone SE) */
+@media (max-height: 680px) {
+  .app-container {
+    height: 100dvh;
+    border-radius: 0;
+    max-height: none;
+    border: none;
+    padding: 20px;
+  }
+  .visualizer-container {
+    width: 200px;
+    height: 200px;
+  }
+  .fluid-orb-wrapper {
+    width: 130px;
+    height: 130px;
+  }
+  .orb-icon {
+    font-size: 2.2rem;
+  }
+  .status-text {
+    font-size: 1.4rem;
+  }
+  .btn-main {
+    padding: 16px;
+    font-size: 1rem;
+  }
 }

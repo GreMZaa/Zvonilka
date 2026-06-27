@@ -1,264 +1,312 @@
 /**
- * ui.js — Модуль интерфейса
- * Управление DOM-элементами и визуальным состоянием.
- *
- * Фаза 2: Интеграция с WebRTC и отображение статусов соединения в логе.
+ * ui.js — Модуль интерфейса (Aesthetic: Refined Bio-Minimalism)
+ * Управление DOM-элементами, анимациями состояний и таймером звонка.
  *
  * Отвечает за:
- * - Обработку нажатий кнопок (Позвонить / Ответить / Сбросить)
- * - Отображение реальных статусов WebRTC (connecting, connected, failed и т.д.)
- * - Вызовы функций webrtc.js и signaling.js
+ * - Кэширование DOM-элементов
+ * - Переключение визуальных состояний (.state-idle, .state-calling, .state-connected и т.д.)
+ * - Управление отображением элементов управления (кнопок сброса, принятия)
+ * - Отслеживание времени активного звонка (секундомер)
+ * - Копирование ID комнаты и сворачивание логов
+ * - Тактильную отдачу (Haptic/Vibration) при входящем звонке
  */
 
-import { createRoom, joinRoom, cleanup, getState } from './signaling.js';
-import { startCall, prepareToReceiveCall, hangUp, onConnectionStateChange } from './webrtc.js';
+import { createRoom, joinRoom, cleanup, getState as getSignalingState } from './signaling.js';
+import { startCall, prepareToReceiveCall, acceptIncomingCall, hangUp, onConnectionStateChange } from './webrtc.js';
 import { log } from './utils.js';
 
-/** @type {HTMLElement} */
-let appContainer = null;
+// === Кэш DOM-элементов ===
+let appEl = null;
+let callStatusEl = null;
+let callTimerEl = null;
+let roomBadgeEl = null;
+let roomCodeEl = null;
+let inputRoomEl = null;
+let signalLogEl = null;
+let debugWrapperEl = null;
+
+// Кнопки и группы действий
+let joinSectionEl = null;
+let actionIdleEl = null;
+let actionActiveEl = null;
+let actionIncomingEl = null;
+
+// === Внутреннее состояние UI ===
+let timerInterval = null;
+let timerSeconds = 0;
+let vibrationInterval = null;
 
 /**
- * Инициализирует интерфейс.
- * Создаёт DOM-элементы и привязывает события.
+ * Инициализирует интерфейс, кэширует элементы и настраивает слушатели событий.
  */
 export function initUI() {
-  appContainer = document.getElementById('app');
-  if (!appContainer) {
-    log('UI', '❌ Контейнер #app не найден!');
+  // Кэшируем основные контейнеры
+  appEl = document.getElementById('app');
+  callStatusEl = document.getElementById('call-status');
+  callTimerEl = document.getElementById('call-timer');
+  roomBadgeEl = document.getElementById('room-badge');
+  roomCodeEl = document.getElementById('room-code');
+  inputRoomEl = document.getElementById('input-room');
+  signalLogEl = document.getElementById('signal-log');
+  debugWrapperEl = document.getElementById('debug-log-wrapper');
+  
+  joinSectionEl = document.getElementById('join-section');
+  actionIdleEl = document.getElementById('action-idle');
+  actionActiveEl = document.getElementById('action-active');
+  actionIncomingEl = document.getElementById('action-incoming');
+
+  if (!appEl) {
+    log('UI', '❌ Критическая ошибка: корневой элемент #app не найден.');
     return;
   }
 
-  // Подписываемся на изменения состояния WebRTC-подключения
+  // Привязка событий кнопок
+  document.getElementById('btn-call').addEventListener('click', _handleCallClick);
+  document.getElementById('btn-join').addEventListener('click', _handleJoinClick);
+  document.getElementById('btn-hangup').addEventListener('click', _handleHangupClick);
+  document.getElementById('btn-decline').addEventListener('click', _handleHangupClick);
+  document.getElementById('btn-accept').addEventListener('click', _handleAcceptClick);
+  document.getElementById('btn-copy').addEventListener('click', _handleCopyClick);
+  document.getElementById('btn-toggle-log').addEventListener('click', _handleToggleLogClick);
+
+  // Подписка на статусы WebRTC
   onConnectionStateChange((state) => {
-    _handleWebRTCStateChange(state);
+    _transitionToState(state);
   });
 
-  _renderIdleScreen();
-  log('UI', '✅ Интерфейс загружен.');
+  // Инициализируем начальный экран (idle)
+  _transitionToState('closed');
+
+  log('UI', '✅ Интерфейс и обработчики событий настроены.');
 }
 
 // ============================
-// Экраны
+// Логика перехода по состояниям
 // ============================
 
 /**
- * Экран ожидания — две кнопки: Позвонить и Ответить.
+ * Переводит интерфейс в одно из состояний связи.
+ * Доступные состояния:
+ * - 'closed' / 'idle' (Ожидание)
+ * - 'connecting' (Вызов/подключение)
+ * - 'connected' (Разговор)
+ * - 'incoming' (Входящий вызов)
+ * - 'failed' (Ошибка соединения)
+ * - 'timeout' (Таймаут соединения)
+ * - 'permission-denied' (Ошибка микрофона)
+ *
  * @private
+ * @param {string} state
  */
-function _renderIdleScreen() {
-  appContainer.innerHTML = `
-    <div class="screen screen--idle">
-      <h1 class="screen__title">📞 Звонилка</h1>
-      <p class="screen__subtitle">Готов к звонку</p>
+function _transitionToState(state) {
+  log('UI', `🎭 Переход интерфейса в состояние: ${state}`);
+  
+  // 1. Очищаем все классы состояния у корневого элемента
+  appEl.className = 'app-container';
+  _stopVibration();
+  _stopTimer();
 
-      <div class="screen__actions">
-        <button id="btn-call" class="btn btn--primary">
-          Позвонить маме
-        </button>
-      </div>
+  // Добавляем соответствующий класс состояния
+  const mappedClass = _mapStateToClass(state);
+  appEl.classList.add(mappedClass);
 
-      <div class="screen__join">
-        <p class="screen__label">Или введи код комнаты:</p>
-        <div class="join-form">
-          <input
-            id="input-room"
-            type="text"
-            class="input"
-            placeholder="Код комнаты"
-            maxlength="8"
-            autocomplete="off"
-          />
-          <button id="btn-join" class="btn btn--secondary">
-            Ответить
-          </button>
-        </div>
-      </div>
+  // Получаем текущие данные сигналинга
+  const sigState = getSignalingState();
 
-      <div id="status-area" class="screen__status"></div>
-    </div>
-  `;
+  // 2. Обновляем элементы управления и тексты
+  switch (state) {
+    case 'closed':
+    case 'idle':
+      _updateText(callStatusEl, 'Готов к звонку');
+      _hide(callTimerEl);
+      _hide(roomBadgeEl);
+      _show(joinSectionEl);
+      
+      _show(actionIdleEl);
+      _hide(actionActiveEl);
+      _hide(actionIncomingEl);
+      break;
 
-  // Привязка событий
-  document.getElementById('btn-call').addEventListener('click', _handleCall);
-  document.getElementById('btn-join').addEventListener('click', _handleJoin);
+    case 'connecting':
+      const isCaller = sigState.role === 'caller';
+      _updateText(callStatusEl, isCaller ? 'Звоним маме...' : 'Подключение...');
+      _hide(callTimerEl);
+      _show(roomBadgeEl);
+      _updateText(roomCodeEl, sigState.roomId || '------');
+      _hide(joinSectionEl);
+      
+      _hide(actionIdleEl);
+      _show(actionActiveEl);
+      _hide(actionIncomingEl);
+      break;
+
+    case 'connected':
+      _updateText(callStatusEl, 'На связи');
+      _show(callTimerEl);
+      _startTimer();
+      _show(roomBadgeEl);
+      _updateText(roomCodeEl, sigState.roomId || '------');
+      _hide(joinSectionEl);
+      
+      _hide(actionIdleEl);
+      _show(actionActiveEl);
+      _hide(actionIncomingEl);
+      break;
+
+    case 'incoming':
+      _updateText(callStatusEl, 'Мама звонит!');
+      _hide(callTimerEl);
+      _show(roomBadgeEl);
+      _updateText(roomCodeEl, sigState.roomId || '------');
+      _hide(joinSectionEl);
+      
+      _hide(actionIdleEl);
+      _hide(actionActiveEl);
+      _show(actionIncomingEl);
+      
+      // Запускаем вибрацию для входящего звонка
+      _startVibration();
+      break;
+
+    case 'failed':
+      _updateText(callStatusEl, 'Ошибка связи');
+      _hide(callTimerEl);
+      _show(roomBadgeEl);
+      _hide(joinSectionEl);
+      _show(actionActiveEl);
+      _addSignalLog('❌ Соединение не удалось установить или оборвалось.');
+      break;
+
+    case 'timeout':
+      _updateText(callStatusEl, 'Лимит ожидания');
+      _hide(callTimerEl);
+      _show(roomBadgeEl);
+      _hide(joinSectionEl);
+      _show(actionActiveEl);
+      _addSignalLog('⏳ Превышено время ожидания ответа.');
+      break;
+
+    case 'permission-denied':
+      _updateText(callStatusEl, 'Нет микрофона');
+      _hide(callTimerEl);
+      _hide(roomBadgeEl);
+      _hide(joinSectionEl);
+      _show(actionActiveEl);
+      _addSignalLog('⚠️ Ошибка: запрещен доступ к микрофону.');
+      break;
+
+    default:
+      _updateText(callStatusEl, 'Соединение...');
+  }
+
+  _addSignalLog(`🔄 Статус WebRTC: ${state}`);
 }
 
-/**
- * Экран активного соединения — показывает комнату и кнопку сброса.
- * @private
- * @param {string} roomId
- * @param {'caller' | 'callee'} role
- */
-function _renderConnectedScreen(roomId, role) {
-  const roleLabel = role === 'caller' ? 'Звонящий (Caller)' : 'Отвечающий (Callee)';
-
-  appContainer.innerHTML = `
-    <div class="screen screen--connected">
-      <h1 class="screen__title" id="call-title">📡 Соединение...</h1>
-      <p class="screen__subtitle">${roleLabel}</p>
-
-      <div class="room-info">
-        <span class="room-info__label">Комната:</span>
-        <code class="room-info__code" id="room-code">${roomId}</code>
-        <button id="btn-copy" class="btn btn--small" title="Скопировать">📋</button>
-      </div>
-
-      <div id="signal-log" class="signal-log"></div>
-
-      <div class="screen__actions">
-        <button id="btn-hangup" class="btn btn--danger">
-          Сбросить
-        </button>
-      </div>
-    </div>
-  `;
-
-  // Привязка событий
-  document.getElementById('btn-hangup').addEventListener('click', _handleHangup);
-  document.getElementById('btn-copy').addEventListener('click', () => {
-    navigator.clipboard.writeText(roomId).then(() => {
-      _addSignalLog('📋 Код скопирован!');
-    });
-  });
-}
-
 // ============================
-// Обработчики событий
+// Обработчики кнопок
 // ============================
 
 /**
- * Обработчик кнопки «Позвонить маме».
- * Создаёт комнату, инициализирует WebRTC-звонок.
+ * Кнопка «Позвонить маме»
  * @private
  */
-async function _handleCall() {
-  _setStatus('Создание комнаты...');
-
+async function _handleCallClick() {
+  _updateText(callStatusEl, 'Создание комнаты...');
+  _addSignalLog('📞 Инициация вызова...');
+  
   try {
-    // 1. Создаем комнату в сигналинге
     const roomId = await createRoom();
-    log('UI', `Создана комната: ${roomId}. Переход на экран звонка.`);
-
-    // 2. Отображаем экран звонка
-    _renderConnectedScreen(roomId, 'caller');
-    _addSignalLog(`📌 Комната создана. Код: ${roomId}`);
-    _addSignalLog('🎤 Запрос микрофона и генерация offer...');
-
-    // 3. Запускаем логику WebRTC-звонка (запросит микрофон, создаст offer и отправит)
+    _transitionToState('connecting');
     await startCall();
-    _addSignalLog('📤 Offer отправлен. Ожидаем ответ...');
-
   } catch (err) {
-    _setStatus(`❌ Ошибка: ${err.message}`);
-    log('UI', `Ошибка при звонке: ${err.message}`);
-    _renderIdleScreen();
-    _setStatus(`Ошибка: ${err.message}`);
+    _addSignalLog(`❌ Ошибка инициации: ${err.message}`);
+    _transitionToState('closed');
   }
 }
 
 /**
- * Обработчик кнопки «Ответить».
- * Присоединяется к комнате, подготавливает WebRTC к приёму звонка.
+ * Кнопка «Войти» (ответ по коду)
  * @private
  */
-async function _handleJoin() {
-  const input = document.getElementById('input-room');
-  const roomId = input?.value.trim();
-
-  if (!roomId) {
-    _setStatus('⚠️ Введите код комнаты');
+async function _handleJoinClick() {
+  const roomId = inputRoomEl.value.trim().toUpperCase();
+  if (!roomId || roomId.length < 4) {
+    _addSignalLog('⚠️ Введите корректный код комнаты');
     return;
   }
 
-  _setStatus('Подключение к комнате...');
+  _updateText(callStatusEl, 'Вход в комнату...');
+  _addSignalLog(`📱 Присоединение к комнате ${roomId}...`);
 
   try {
-    // 1. Подключаемся к комнате в сигналинге
     await joinRoom(roomId);
-    log('UI', `Присоединились к комнате: ${roomId}`);
-
-    // 2. Переходим на экран звонка
-    _renderConnectedScreen(roomId, 'callee');
-    _addSignalLog(`📌 Подключено к комнате: ${roomId}`);
-    _addSignalLog('⏳ Ожидаем входящий offer от caller...');
-
-    // 3. Подготавливаем WebRTC к прослушиванию входящего offer
+    _transitionToState('connecting');
     await prepareToReceiveCall();
-
   } catch (err) {
-    _setStatus(`❌ Ошибка: ${err.message}`);
-    log('UI', `Ошибка при подключении: ${err.message}`);
-    _renderIdleScreen();
-    _setStatus(`Ошибка: ${err.message}`);
+    _addSignalLog(`❌ Ошибка подключения: ${err.message}`);
+    _transitionToState('closed');
   }
 }
 
 /**
- * Обработчик кнопки «Сбросить».
- * Прерывает звонок и очищает ресурсы.
+ * Кнопка «Ответить» (принять входящий)
  * @private
  */
-async function _handleHangup() {
+async function _handleAcceptClick() {
+  _addSignalLog('🟢 Принятие вызова...');
   try {
-    _addSignalLog('📴 Завершение звонка...');
+    await acceptIncomingCall();
+  } catch (err) {
+    _addSignalLog(`❌ Не удалось ответить: ${err.message}`);
+    _transitionToState('closed');
+  }
+}
+
+/**
+ * Кнопка «Сбросить» / «Отклонить»
+ * @private
+ */
+async function _handleHangupClick() {
+  _addSignalLog('📴 Сброс соединения...');
+  try {
     await hangUp(true);
   } catch (err) {
     log('UI', `Ошибка при сбросе: ${err.message}`);
   }
-  _renderIdleScreen();
+  _transitionToState('closed');
 }
 
 /**
- * Реагирует на системные изменения статуса подключения WebRTC.
+ * Копирование кода в буфер
  * @private
- * @param {string} state
  */
-function _handleWebRTCStateChange(state) {
-  const callTitle = document.getElementById('call-title');
-  
-  if (callTitle) {
-    switch (state) {
-      case 'connecting':
-        callTitle.textContent = '📡 Соединение...';
-        break;
-      case 'connected':
-        callTitle.textContent = '🟢 Разговор';
-        break;
-      case 'disconnected':
-        callTitle.textContent = '🟡 Обрыв связи...';
-        break;
-      case 'failed':
-        callTitle.textContent = '❌ Ошибка связи';
-        break;
-      case 'closed':
-        callTitle.textContent = '📴 Звонок завершен';
-        break;
-      case 'timeout':
-        callTitle.textContent = '⏳ Таймаут соединения';
-        break;
-      case 'permission-denied':
-        callTitle.textContent = '🎤 Нет доступа';
-        break;
-      default:
-        callTitle.textContent = '📡 Соединение';
-    }
+function _handleCopyClick() {
+  const sigState = getSignalingState();
+  if (sigState.roomId) {
+    navigator.clipboard.writeText(sigState.roomId)
+      .then(() => {
+        _addSignalLog('📋 Код комнаты скопирован в буфер обмена');
+        // Быстрая анимация кнопки
+        const btn = document.getElementById('btn-copy');
+        btn.style.transform = 'scale(1.3)';
+        setTimeout(() => btn.style.transform = '', 200);
+      })
+      .catch(err => log('UI', `Не удалось скопировать: ${err.message}`));
   }
+}
 
-  // Добавляем запись в лог на экране
-  _addSignalLog(`🔄 Статус WebRTC: ${state}`);
-
-  // Если звонок завершился или произошла фатальная ошибка, возвращаемся в меню через 3 секунды
-  if (state === 'closed' || state === 'failed' || state === 'timeout' || state === 'permission-denied') {
-    setTimeout(() => {
-      // Проверяем, находится ли пользователь всё еще на экране соединения
-      const activeHangupBtn = document.getElementById('btn-hangup');
-      if (activeHangupBtn) {
-        _renderIdleScreen();
-        if (state !== 'closed') {
-          _setStatus(`Звонок завершен: статус ${state}`);
-        }
-      }
-    }, 3000);
+/**
+ * Переключатель видимости лога сигналинга
+ * @private
+ */
+function _handleToggleLogClick() {
+  const btn = document.getElementById('btn-toggle-log');
+  const isCollapsed = debugWrapperEl.classList.toggle('collapsed');
+  
+  if (isCollapsed) {
+    btn.textContent = 'Детали соединения ▾';
+  } else {
+    btn.textContent = 'Свернуть детали ▴';
   }
 }
 
@@ -266,33 +314,90 @@ function _handleWebRTCStateChange(state) {
 // Вспомогательные функции UI
 // ============================
 
-/**
- * Показывает статусное сообщение на экране ожидания.
- * @private
- * @param {string} message
- */
-function _setStatus(message) {
-  const statusArea = document.getElementById('status-area');
-  if (statusArea) {
-    statusArea.textContent = message;
+function _show(el) {
+  if (el) el.classList.remove('hidden');
+}
+
+function _hide(el) {
+  if (el) el.classList.add('hidden');
+}
+
+function _updateText(el, text) {
+  if (el) el.textContent = text;
+}
+
+function _mapStateToClass(state) {
+  switch (state) {
+    case 'connecting': return 'state-calling';
+    case 'connected': return 'state-connected';
+    case 'incoming': return 'state-incoming';
+    case 'failed': return 'state-failed';
+    case 'timeout': return 'state-failed';
+    case 'permission-denied': return 'state-denied';
+    default: return 'state-idle';
   }
 }
 
 /**
- * Добавляет запись в лог сигналов (экран соединения).
+ * Добавляет лог в окно отладки
  * @private
- * @param {string} message
+ * @param {string} msg
  */
-function _addSignalLog(message) {
-  const logArea = document.getElementById('signal-log');
-  if (!logArea) return;
-
+function _addSignalLog(msg) {
+  if (!signalLogEl) return;
   const entry = document.createElement('div');
   entry.className = 'signal-log__entry';
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  entry.textContent = `[${time}] ${msg}`;
+  signalLogEl.appendChild(entry);
+  signalLogEl.scrollTop = signalLogEl.scrollHeight;
+}
 
-  const time = new Date().toLocaleTimeString();
-  entry.textContent = `[${time}] ${message}`;
+// ============================
+// Таймер разговора
+// ============================
 
-  logArea.appendChild(entry);
-  logArea.scrollTop = logArea.scrollHeight;
+function _startTimer() {
+  _stopTimer();
+  timerSeconds = 0;
+  callTimerEl.textContent = '00:00';
+  
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+    const secs = String(timerSeconds % 60).padStart(2, '0');
+    callTimerEl.textContent = `${mins}:${secs}`;
+  }, 1000);
+}
+
+function _stopTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  timerSeconds = 0;
+}
+
+// ============================
+// Haptic Feedback / Вибрация
+// ============================
+
+function _startVibration() {
+  _stopVibration();
+  if ('vibrate' in navigator) {
+    // Паттерн вибрации: 600мс вибрируем, 600мс пауза
+    const vibrate = () => navigator.vibrate([600, 600]);
+    vibrate();
+    vibrationInterval = setInterval(vibrate, 1200);
+  }
+}
+
+function _stopVibration() {
+  if (vibrationInterval) {
+    clearInterval(vibrationInterval);
+    vibrationInterval = null;
+  }
+  if ('vibrate' in navigator) {
+    navigator.vibrate(0);
+  }
 }
