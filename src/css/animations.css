@@ -1,0 +1,24 @@
+/**
+ * animations.css — Анимации и переходы
+ * 
+ * Все keyframes и анимации вынесены в отдельный файл
+ * для удобства поддержки и масштабирования.
+ */
+
+/* Пульсация кнопки вызова */
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+}
+
+/* Волновой эффект при звонке */
+@keyframes ripple {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* Плавное появление */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

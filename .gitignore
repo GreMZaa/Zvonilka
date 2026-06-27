@@ -1,0 +1,16 @@
+# Зависимости
+node_modules/
+
+# Supabase локальные данные
+supabase/.temp/
+supabase/.branches/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
