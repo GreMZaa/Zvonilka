@@ -6,7 +6,7 @@
  * Запросы к Supabase и другим сторонним доменам всегда идут по сети.
  */
 
-const CACHE_NAME = 'zvonilka-v1.3';
+const CACHE_NAME = 'zvonilka-v1.4';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -24,13 +24,15 @@ const STATIC_ASSETS = [
   './assets/icons/icon-512.png',
 ];
 
-// Установка — кешируем статику
+// Установка — кешируем статику с обходом HTTP-кеша
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[Service Worker] Кеширование статических ресурсов...');
-        return cache.addAll(STATIC_ASSETS);
+        console.log('[Service Worker] Кеширование ресурсов...');
+        // Force network fetch to bypass browser HTTP cache on update
+        const requests = STATIC_ASSETS.map(url => new Request(url, { cache: 'reload' }));
+        return cache.addAll(requests);
       })
       .then(() => self.skipWaiting())
   );

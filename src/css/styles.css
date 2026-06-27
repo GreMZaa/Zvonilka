@@ -181,6 +181,7 @@ body {
 /* === 6. Главная область (Main) === */
 .app-main {
   flex: 1;
+  min-height: 0; /* Позволяет сжиматься и активировать скролл при переполнении */
   display: flex;
   flex-direction: column;
   justify-content: flex-start; /* Начинаем контент сверху */
