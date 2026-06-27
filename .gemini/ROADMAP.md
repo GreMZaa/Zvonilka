@@ -220,25 +220,25 @@
 
 ### Задачи
 
-- [ ] **4.1** Создать иконки приложения
+- [x] **4.1** Создать иконки приложения
   - `icon-192.png` (192×192) → `assets/icons/`
   - `icon-512.png` (512×512) → `assets/icons/`
   - Формат: телефонная трубка на градиентном фоне
-- [ ] **4.2** Проверить `manifest.json`
+- [x] **4.2** Проверить `manifest.json`
   - Все поля заполнены
   - `display: standalone` для полноэкранного режима
   - `orientation: portrait`
-- [ ] **4.3** Настроить Service Worker ([`sw.js`](file:///e:/Dialer/sw.js))
+- [x] **4.3** Настроить Service Worker ([`sw.js`](file:///e:/Dialer/sw.js))
   - Кешировать все статические ресурсы при установке
   - Network-first для динамических запросов (Supabase)
   - Обновление кеша при новых версиях (бампить `CACHE_NAME`)
-- [ ] **4.4** Зарегистрировать SW в [`app.js`](file:///e:/Dialer/src/js/app.js)
+- [x] **4.4** Зарегистрировать SW в [`app.js`](file:///e:/Dialer/src/js/app.js)
   ```js
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js');
   }
   ```
-- [ ] **4.5** Тестирование PWA
+- [x] **4.5** Тестирование PWA
   - Chrome DevTools → Application → Manifest — всё зелёное
   - Lighthouse → PWA audit — score ≥ 90
   - iOS Safari → «Добавить на главный экран» → открывается без адресной строки

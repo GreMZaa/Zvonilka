@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 4. Service Worker — регистрация для PWA
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('./sw.js')
       .then(() => log('App', '✅ Service Worker зарегистрирован.'))
       .catch((err) => log('App', `⚠️ Service Worker не удалось зарегистрировать: ${err.message}`));
   }
