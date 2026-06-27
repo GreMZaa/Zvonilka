@@ -2,16 +2,16 @@
  * ui.js — Модуль интерфейса
  * Управление DOM-элементами и визуальным состоянием.
  *
- * Фаза 1: Минимальный тестовый интерфейс для проверки сигналинга.
- * Фаза 3: Будет переписан на полноценный UI с анимациями.
+ * Фаза 2: Интеграция с WebRTC и отображение статусов соединения в логе.
  *
  * Отвечает за:
  * - Обработку нажатий кнопок (Позвонить / Ответить / Сбросить)
- * - Обновление статуса соединения
- * - Анимации и визуальная обратная связь
+ * - Отображение реальных статусов WebRTC (connecting, connected, failed и т.д.)
+ * - Вызовы функций webrtc.js и signaling.js
  */
 
-import { createRoom, joinRoom, sendSignal, onSignal, cleanup, getState } from './signaling.js';
+import { createRoom, joinRoom, cleanup, getState } from './signaling.js';
+import { startCall, prepareToReceiveCall, hangUp, onConnectionStateChange } from './webrtc.js';
 import { log } from './utils.js';
 
 /** @type {HTMLElement} */
@@ -27,6 +27,11 @@ export function initUI() {
     log('UI', '❌ Контейнер #app не найден!');
     return;
   }
+
+  // Подписываемся на изменения состояния WebRTC-подключения
+  onConnectionStateChange((state) => {
+    _handleWebRTCStateChange(state);
+  });
 
   _renderIdleScreen();
   log('UI', '✅ Интерфейс загружен.');
@@ -85,11 +90,11 @@ function _renderIdleScreen() {
  * @param {'caller' | 'callee'} role
  */
 function _renderConnectedScreen(roomId, role) {
-  const roleLabel = role === 'caller' ? 'Звонящий' : 'Отвечающий';
+  const roleLabel = role === 'caller' ? 'Звонящий (Caller)' : 'Отвечающий (Callee)';
 
   appContainer.innerHTML = `
     <div class="screen screen--connected">
-      <h1 class="screen__title">📡 На связи</h1>
+      <h1 class="screen__title" id="call-title">📡 Соединение...</h1>
       <p class="screen__subtitle">${roleLabel}</p>
 
       <div class="room-info">
@@ -115,11 +120,6 @@ function _renderConnectedScreen(roomId, role) {
       _addSignalLog('📋 Код скопирован!');
     });
   });
-
-  // Подписаться на входящие сигналы и выводить в лог
-  onSignal((signal) => {
-    _addSignalLog(`📥 ${signal.type} от ${signal.sender}`);
-  });
 }
 
 // ============================
@@ -128,31 +128,37 @@ function _renderConnectedScreen(roomId, role) {
 
 /**
  * Обработчик кнопки «Позвонить маме».
- * Создаёт комнату и переключает экран.
+ * Создаёт комнату, инициализирует WebRTC-звонок.
  * @private
  */
 async function _handleCall() {
-  _setStatus('Создаю комнату...');
+  _setStatus('Создание комнаты...');
 
   try {
+    // 1. Создаем комнату в сигналинге
     const roomId = await createRoom();
-    log('UI', `Комната создана: ${roomId}`);
+    log('UI', `Создана комната: ${roomId}. Переход на экран звонка.`);
 
-    // Отправить тестовый сигнал, чтобы убедиться что всё работает
-    await sendSignal('offer', { test: true, message: 'Привет от caller!' });
-
+    // 2. Отображаем экран звонка
     _renderConnectedScreen(roomId, 'caller');
-    _addSignalLog('✅ Комната создана. Жду ответчика...');
-    _addSignalLog(`📌 Код комнаты: ${roomId}`);
+    _addSignalLog(`📌 Комната создана. Код: ${roomId}`);
+    _addSignalLog('🎤 Запрос микрофона и генерация offer...');
+
+    // 3. Запускаем логику WebRTC-звонка (запросит микрофон, создаст offer и отправит)
+    await startCall();
+    _addSignalLog('📤 Offer отправлен. Ожидаем ответ...');
+
   } catch (err) {
     _setStatus(`❌ Ошибка: ${err.message}`);
-    log('UI', `Ошибка создания комнаты: ${err.message}`);
+    log('UI', `Ошибка при звонке: ${err.message}`);
+    _renderIdleScreen();
+    _setStatus(`Ошибка: ${err.message}`);
   }
 }
 
 /**
  * Обработчик кнопки «Ответить».
- * Присоединяется к комнате по введённому коду.
+ * Присоединяется к комнате, подготавливает WebRTC к приёму звонка.
  * @private
  */
 async function _handleJoin() {
@@ -164,37 +170,96 @@ async function _handleJoin() {
     return;
   }
 
-  _setStatus('Подключаюсь...');
+  _setStatus('Подключение к комнате...');
 
   try {
+    // 1. Подключаемся к комнате в сигналинге
     await joinRoom(roomId);
-    log('UI', `Подключён к комнате: ${roomId}`);
+    log('UI', `Присоединились к комнате: ${roomId}`);
 
-    // Отправить ответный сигнал
-    await sendSignal('answer', { test: true, message: 'Привет от callee!' });
-
+    // 2. Переходим на экран звонка
     _renderConnectedScreen(roomId, 'callee');
-    _addSignalLog('✅ Подключён к комнате!');
+    _addSignalLog(`📌 Подключено к комнате: ${roomId}`);
+    _addSignalLog('⏳ Ожидаем входящий offer от caller...');
+
+    // 3. Подготавливаем WebRTC к прослушиванию входящего offer
+    await prepareToReceiveCall();
+
   } catch (err) {
     _setStatus(`❌ Ошибка: ${err.message}`);
-    log('UI', `Ошибка подключения: ${err.message}`);
+    log('UI', `Ошибка при подключении: ${err.message}`);
+    _renderIdleScreen();
+    _setStatus(`Ошибка: ${err.message}`);
   }
 }
 
 /**
  * Обработчик кнопки «Сбросить».
- * Завершает соединение и возвращает на главный экран.
+ * Прерывает звонок и очищает ресурсы.
  * @private
  */
 async function _handleHangup() {
   try {
-    await cleanup();
-    log('UI', 'Звонок завершён.');
+    _addSignalLog('📴 Завершение звонка...');
+    await hangUp(true);
   } catch (err) {
     log('UI', `Ошибка при сбросе: ${err.message}`);
   }
-
   _renderIdleScreen();
+}
+
+/**
+ * Реагирует на системные изменения статуса подключения WebRTC.
+ * @private
+ * @param {string} state
+ */
+function _handleWebRTCStateChange(state) {
+  const callTitle = document.getElementById('call-title');
+  
+  if (callTitle) {
+    switch (state) {
+      case 'connecting':
+        callTitle.textContent = '📡 Соединение...';
+        break;
+      case 'connected':
+        callTitle.textContent = '🟢 Разговор';
+        break;
+      case 'disconnected':
+        callTitle.textContent = '🟡 Обрыв связи...';
+        break;
+      case 'failed':
+        callTitle.textContent = '❌ Ошибка связи';
+        break;
+      case 'closed':
+        callTitle.textContent = '📴 Звонок завершен';
+        break;
+      case 'timeout':
+        callTitle.textContent = '⏳ Таймаут соединения';
+        break;
+      case 'permission-denied':
+        callTitle.textContent = '🎤 Нет доступа';
+        break;
+      default:
+        callTitle.textContent = '📡 Соединение';
+    }
+  }
+
+  // Добавляем запись в лог на экране
+  _addSignalLog(`🔄 Статус WebRTC: ${state}`);
+
+  // Если звонок завершился или произошла фатальная ошибка, возвращаемся в меню через 3 секунды
+  if (state === 'closed' || state === 'failed' || state === 'timeout' || state === 'permission-denied') {
+    setTimeout(() => {
+      // Проверяем, находится ли пользователь всё еще на экране соединения
+      const activeHangupBtn = document.getElementById('btn-hangup');
+      if (activeHangupBtn) {
+        _renderIdleScreen();
+        if (state !== 'closed') {
+          _setStatus(`Звонок завершен: статус ${state}`);
+        }
+      }
+    }, 3000);
+  }
 }
 
 // ============================

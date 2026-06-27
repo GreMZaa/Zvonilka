@@ -27,10 +27,10 @@
 
 ### Задачи
 
-- [ ] **0.1** Создать проект в [Supabase](https://supabase.com/)
+- [x] **0.1** Создать проект в [Supabase](https://supabase.com/)
   - Записать `Project URL` и `anon public key`
   - Включить Realtime для нужных таблиц
-- [ ] **0.2** Создать таблицу сигналинга в Supabase
+- [x] **0.2** Создать таблицу сигналинга в Supabase
   ```sql
   create table signaling (
     id uuid default gen_random_uuid() primary key,
@@ -44,16 +44,16 @@
   -- Включить Realtime для таблицы
   alter publication supabase_realtime add table signaling;
   ```
-- [ ] **0.3** Настроить RLS-политики (Row Level Security)
+- [x] **0.3** Настроить RLS-политики (Row Level Security)
   - Разрешить `INSERT` и `SELECT` для анонимных пользователей по `room_id`
   - Запретить `UPDATE` и `DELETE`
-- [ ] **0.4** Зарегистрироваться на [Metered.ca](https://www.metered.ca/) для TURN-сервера
+- [x] **0.4** Зарегистрироваться на [Metered.ca](https://www.metered.ca/) для TURN-сервера
   - Получить URL, username, credential
   - Бесплатный тариф: 50 ГБ/мес
-- [ ] **0.5** Заполнить [`src/js/config.js`](file:///e:/Dialer/src/js/config.js) реальными данными
+- [x] **0.5** Заполнить [`src/js/config.js`](file:///e:/Dialer/src/js/config.js) реальными данными
   - `SUPABASE_URL`, `SUPABASE_ANON_KEY`
   - TURN-сервер в массиве `ICE_SERVERS`
-- [ ] **0.6** Создать GitHub-репозиторий и включить GitHub Pages (ветка `main`, корень `/`)
+- [x] **0.6** Создать GitHub-репозиторий и включить GitHub Pages (ветка `main`, корень `/`)
 
 ### Критерий готовности
 ✅ `config.js` содержит рабочие ключи. Supabase Realtime отвечает. TURN-сервер доступен.
@@ -112,30 +112,30 @@
 
 ### Задачи
 
-- [ ] **2.1** Запрос доступа к микрофону
+- [x] **2.1** Запрос доступа к микрофону
   ```js
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
   ```
-- [ ] **2.2** Создание RTCPeerConnection с ICE-серверами из конфига
+- [x] **2.2** Создание RTCPeerConnection с ICE-серверами из конфига
   ```js
   const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   ```
-- [ ] **2.3** Добавить локальный медиа-поток в PeerConnection
+- [x] **2.3** Добавить локальный медиа-поток в PeerConnection
   ```js
   stream.getTracks().forEach(track => pc.addTrack(track, stream));
   ```
-- [ ] **2.4** Обработка ICE-кандидатов
+- [x] **2.4** Обработка ICE-кандидатов
   - `pc.onicecandidate` → отправить через `signaling.sendSignal()`
   - Входящие ICE → `pc.addIceCandidate()`
-- [ ] **2.5** Логика звонящего (caller)
+- [x] **2.5** Логика звонящего (caller)
   - Создать offer: `pc.createOffer()` → `pc.setLocalDescription()`
   - Отправить offer через сигналинг
   - Получить answer → `pc.setRemoteDescription()`
-- [ ] **2.6** Логика отвечающего (callee)
+- [x] **2.6** Логика отвечающего (callee)
   - Получить offer → `pc.setRemoteDescription()`
   - Создать answer: `pc.createAnswer()` → `pc.setLocalDescription()`
   - Отправить answer через сигналинг
-- [ ] **2.7** Воспроизведение удалённого аудио
+- [x] **2.7** Воспроизведение удалённого аудио
   ```js
   pc.ontrack = (event) => {
     const audio = new Audio();
@@ -143,11 +143,11 @@
     audio.play();
   };
   ```
-- [ ] **2.8** Обработка состояний соединения
+- [x] **2.8** Обработка состояний соединения
   - `pc.onconnectionstatechange` → отслеживать `connected`, `disconnected`, `failed`
   - Таймаут на соединение (`CONNECTION_TIMEOUT_MS`)
-- [ ] **2.9** Завершение звонка — закрытие PeerConnection, остановка треков, очистка
-- [ ] **2.10** Обход NAT — проверить работу через:
+- [x] **2.9** Завершение звонка — закрытие PeerConnection, остановка треков, очистка
+- [x] **2.10** Обход NAT — проверить работу через:
   - Одна WiFi-сеть (локально)
   - Разные сети (мобильная + WiFi)
   - Мобильный интернет 4G с обеих сторон
