@@ -12,7 +12,7 @@
  */
 
 import { createRoom, joinRoom, cleanup, getState as getSignalingState } from './signaling.js';
-import { startCall, prepareToReceiveCall, acceptIncomingCall, hangUp, onConnectionStateChange } from './webrtc.js';
+import { startCall, prepareToReceiveCall, acceptIncomingCall, hangUp, onConnectionStateChange, toggleMute } from './webrtc.js';
 import { log } from './utils.js';
 import { 
   playRingtone, 
@@ -38,11 +38,15 @@ let joinSectionEl = null;
 let actionIdleEl = null;
 let actionActiveEl = null;
 let actionIncomingEl = null;
+let btnMuteEl = null;
+let historySectionEl = null;
+let historyListEl = null;
 
 // === Внутреннее состояние UI ===
 let timerInterval = null;
 let timerSeconds = 0;
 let vibrationInterval = null;
+let isCallActive = false; // Отслеживает, был ли звонок соединен
 
 /**
  * Инициализирует интерфейс, кэширует элементы и настраивает слушатели событий.
@@ -62,6 +66,10 @@ export function initUI() {
   actionIdleEl = document.getElementById('action-idle');
   actionActiveEl = document.getElementById('action-active');
   actionIncomingEl = document.getElementById('action-incoming');
+  
+  btnMuteEl = document.getElementById('btn-mute');
+  historySectionEl = document.getElementById('history-section');
+  historyListEl = document.getElementById('history-list');
 
   if (!appEl) {
     log('UI', '❌ Критическая ошибка: корневой элемент #app не найден.');
@@ -76,6 +84,9 @@ export function initUI() {
   document.getElementById('btn-accept').addEventListener('click', _handleAcceptClick);
   document.getElementById('btn-copy').addEventListener('click', _handleCopyClick);
   document.getElementById('btn-toggle-log').addEventListener('click', _handleToggleLogClick);
+  
+  btnMuteEl.addEventListener('click', _handleMuteClick);
+  document.getElementById('btn-toggle-history').addEventListener('click', _handleToggleHistoryClick);
 
   // Подписка на статусы WebRTC
   onConnectionStateChange((state) => {
@@ -84,6 +95,7 @@ export function initUI() {
 
   // Инициализируем начальный экран (idle)
   _transitionToState('closed');
+  _renderHistory();
 
   log('UI', '✅ Интерфейс и обработчики событий настроены.');
 }
@@ -109,6 +121,11 @@ export function initUI() {
 function _transitionToState(state) {
   log('UI', `🎭 Переход интерфейса в состояние: ${state}`);
   
+  // Если звонок завершается, сохраняем его в историю
+  if (isCallActive && (state === 'closed' || state === 'failed' || state === 'timeout' || state === 'permission-denied' || state === 'idle')) {
+    _saveCallToHistory();
+  }
+
   // 1. Очищаем все классы состояния у корневого элемента
   appEl.className = 'app-container';
   _stopVibration();
@@ -117,6 +134,11 @@ function _transitionToState(state) {
   // Останавливаем все фоновые циклы звуков
   stopRingtone();
   stopDialTone();
+
+  // Сбрасываем кнопку Mute
+  if (btnMuteEl) {
+    btnMuteEl.classList.remove('muted');
+  }
 
   // Добавляем соответствующий класс состояния
   const mappedClass = _mapStateToClass(state);
@@ -133,6 +155,7 @@ function _transitionToState(state) {
       _hide(callTimerEl);
       _hide(roomBadgeEl);
       _show(joinSectionEl);
+      _show(historySectionEl); // Показываем секцию истории в меню
       
       _show(actionIdleEl);
       _hide(actionActiveEl);
@@ -146,6 +169,7 @@ function _transitionToState(state) {
       _show(roomBadgeEl);
       _updateText(roomCodeEl, sigState.roomId || '------');
       _hide(joinSectionEl);
+      _hide(historySectionEl); // Скрываем историю во время звонка
       
       _hide(actionIdleEl);
       _show(actionActiveEl);
@@ -158,12 +182,14 @@ function _transitionToState(state) {
       break;
 
     case 'connected':
+      isCallActive = true; // Отмечаем, что звонок успешно начался
       _updateText(callStatusEl, 'На связи');
       _show(callTimerEl);
       _startTimer();
       _show(roomBadgeEl);
       _updateText(roomCodeEl, sigState.roomId || '------');
       _hide(joinSectionEl);
+      _hide(historySectionEl);
       
       _hide(actionIdleEl);
       _show(actionActiveEl);
@@ -179,6 +205,7 @@ function _transitionToState(state) {
       _show(roomBadgeEl);
       _updateText(roomCodeEl, sigState.roomId || '------');
       _hide(joinSectionEl);
+      _hide(historySectionEl);
       
       _hide(actionIdleEl);
       _hide(actionActiveEl);
@@ -194,6 +221,7 @@ function _transitionToState(state) {
       _hide(callTimerEl);
       _show(roomBadgeEl);
       _hide(joinSectionEl);
+      _hide(historySectionEl);
       _show(actionActiveEl);
       _addSignalLog('❌ Соединение не удалось установить или оборвалось.');
 
@@ -206,6 +234,7 @@ function _transitionToState(state) {
       _hide(callTimerEl);
       _show(roomBadgeEl);
       _hide(joinSectionEl);
+      _hide(historySectionEl);
       _show(actionActiveEl);
       _addSignalLog('⏳ Превышено время ожидания ответа.');
 
@@ -218,6 +247,7 @@ function _transitionToState(state) {
       _hide(callTimerEl);
       _hide(roomBadgeEl);
       _hide(joinSectionEl);
+      _hide(historySectionEl);
       _show(actionActiveEl);
       _addSignalLog('⚠️ Ошибка: запрещен доступ к микрофону.');
 
@@ -431,3 +461,122 @@ function _stopVibration() {
     navigator.vibrate(0);
   }
 }
+
+// ============================
+// Обработчики Mute и Истории
+// ============================
+
+/**
+ * Переключатель отключения микрофона
+ * @private
+ */
+function _handleMuteClick() {
+  const isMuted = toggleMute();
+  if (isMuted) {
+    btnMuteEl.classList.add('muted');
+    _addSignalLog('🔇 Ваш микрофон отключен');
+  } else {
+    btnMuteEl.classList.remove('muted');
+    _addSignalLog('🎤 Ваш микрофон включен');
+  }
+}
+
+/**
+ * Переключатель видимости панели истории
+ * @private
+ */
+function _handleToggleHistoryClick() {
+  const btn = document.getElementById('btn-toggle-history');
+  const isHidden = historyListEl.classList.toggle('hidden');
+  
+  if (isHidden) {
+    btn.textContent = '⏳ История звонков';
+  } else {
+    btn.textContent = '⏳ Скрыть историю';
+    _renderHistory(); // Перерисовываем актуальный список при открытии
+  }
+}
+
+// ============================
+// Работа с Историей (Local Storage)
+// ============================
+
+/**
+ * Сохраняет информацию о прошедшем звонке в историю.
+ * @private
+ */
+function _saveCallToHistory() {
+  const sigState = getSignalingState();
+  const durationStr = callTimerEl.textContent;
+  
+  const callRecord = {
+    id: Date.now(),
+    role: sigState.role || 'caller',
+    date: new Date().toLocaleDateString([], { day: '2-digit', month: '2-digit' }),
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    duration: durationStr
+  };
+
+  try {
+    const rawHistory = localStorage.getItem('zvonilka_call_history') || '[]';
+    const history = JSON.parse(rawHistory);
+    
+    // Добавляем в начало и ограничиваем до 5 записей
+    history.unshift(callRecord);
+    if (history.length > 5) history.pop();
+    
+    localStorage.setItem('zvonilka_call_history', JSON.stringify(history));
+    log('UI', '✅ Звонок сохранен в историю звонков.');
+  } catch (err) {
+    log('UI', `⚠️ Не удалось сохранить звонок в историю: ${err.message}`);
+  }
+
+  isCallActive = false; // Сбрасываем флаг активности
+}
+
+/**
+ * Считывает и отображает историю звонков.
+ * @private
+ */
+function _renderHistory() {
+  if (!historyListEl) return;
+
+  try {
+    const rawHistory = localStorage.getItem('zvonilka_call_history') || '[]';
+    const history = JSON.parse(rawHistory);
+
+    if (history.length === 0) {
+      historyListEl.innerHTML = `
+        <div class="history-item" style="justify-content: center; color: var(--text-muted);">
+          История звонков пуста
+        </div>
+      `;
+      return;
+    }
+
+    historyListEl.innerHTML = history.map(item => {
+      const isOut = item.role === 'caller';
+      const directionIcon = isOut ? '↗️' : '↙️';
+      const directionClass = isOut ? 'history-item--out' : 'history-item--in';
+      const nameText = isOut ? 'Исходящий' : 'Входящий';
+
+      return `
+        <div class="history-item ${directionClass}">
+          <div class="history-item__info">
+            <span class="history-item__direction">${directionIcon}</span>
+            <div class="history-item__meta">
+              <span class="history-item__name">${nameText}</span>
+              <span class="history-item__time">${item.date}, ${item.time}</span>
+            </div>
+          </div>
+          <span class="history-item__duration">${item.duration}</span>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    log('UI', `⚠️ Ошибка рендеринга истории: ${err.message}`);
+    historyListEl.innerHTML = `<div class="history-item" style="color: var(--color-danger);">Ошибка чтения истории</div>`;
+  }
+}
+

@@ -424,3 +424,34 @@ function _clearConnectionTimeout() {
     connectionTimeoutTimer = null;
   }
 }
+
+// ============================
+// 10. Отключение микрофона (Mute)
+// ============================
+
+/**
+ * Переключает состояние отключения микрофона.
+ * @returns {boolean} true, если микрофон выключен (muted), иначе false
+ */
+export function toggleMute() {
+  if (!localStream) {
+    log('WebRTC', '⚠️ Попытка mute, но локальный медиапоток отсутствует.');
+    return false;
+  }
+
+  const audioTracks = localStream.getAudioTracks();
+  if (audioTracks.length === 0) {
+    log('WebRTC', '⚠️ Аудиодорожки не найдены.');
+    return false;
+  }
+
+  // Инвертируем состояние включения для всех треков
+  const isEnabled = audioTracks[0].enabled;
+  audioTracks.forEach(track => {
+    track.enabled = !isEnabled;
+    log('WebRTC', `🎤 Микрофон ${track.enabled ? 'ВКЛЮЧЕН' : 'ВЫКЛЮЧЕН'}`);
+  });
+
+  return !isEnabled; // Возвращаем новое состояние: true = приглушен (muted)
+}
+
