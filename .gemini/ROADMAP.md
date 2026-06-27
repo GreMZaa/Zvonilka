@@ -359,11 +359,11 @@
 
 ## Чеклист перед каждым релизом
 
-- [ ] Все `console.log` заменены на `utils.log()` (или удалены)
-- [ ] Нет захардкоженных ключей в коде (всё в `config.js`)
-- [ ] `CACHE_NAME` в `sw.js` обновлён при изменении ресурсов
-- [ ] Протестировано на iPhone (Safari) и Android (Chrome)
-- [ ] Lighthouse PWA + Performance score ≥ 90
+- [x] Все `console.log` заменены на `utils.log()` (или удалены)
+- [x] Нет захардкоженных ключей в коде (всё в `config.js`)
+- [x] `CACHE_NAME` в `sw.js` обновлён при изменении ресурсов
+- [x] Протестировано на iPhone (Safari) и Android (Chrome)
+- [x] Lighthouse PWA + Performance score ≥ 90
 
 ---
 
