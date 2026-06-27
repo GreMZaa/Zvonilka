@@ -173,6 +173,38 @@ export async function joinRoom(roomId) {
   _subscribeToRoom();
 
   isConnected = true;
+
+  // Безопасный запрос существующего offer из БД для устранения состояния гонки
+  setTimeout(async () => {
+    try {
+      if (currentRoomId !== roomId || currentRole !== 'callee') return;
+      const { data, error } = await supabase
+        .from(SIGNALING_TABLE)
+        .select('type, payload, sender')
+        .eq('room_id', roomId)
+        .eq('type', 'offer')
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        const record = data[0];
+        log('Signaling', `📥 Извлечен существующий ${record.type} из БД для комнаты ${roomId}`);
+        const signal = {
+          type: record.type,
+          payload: record.payload,
+          sender: record.sender,
+        };
+        for (const listener of signalListeners) {
+          try {
+            listener(signal);
+          } catch (e) {
+            log('Signaling', `❌ Ошибка слушателя при предзагрузке: ${e.message}`);
+          }
+        }
+      }
+    } catch (err) {
+      log('Signaling', `⚠️ Не удалось предзагрузить offer из БД: ${err.message}`);
+    }
+  }, 400);
 }
 
 // ============================
@@ -302,6 +334,14 @@ export function getState() {
   };
 }
 
+/**
+ * Возвращает глобальный инстанс Supabase клиента.
+ * @returns {import('@supabase/supabase-js').SupabaseClient | null}
+ */
+export function getSupabase() {
+  return supabase;
+}
+
 // ============================
 // Приватные функции
 // ============================
@@ -393,3 +433,110 @@ function _subscribeToRoom() {
       }
     });
 }
+
+/** @type {import('@supabase/supabase-js').RealtimeChannel | null} */
+let personalChannel = null;
+
+/**
+ * Инициализирует личный broadcast-канал пользователя для входящих звонков.
+ * @param {string} userId - UUID текущего пользователя
+ * @param {function} onIncomingInvite - колбэк на входящий вызов
+ * @param {function} onInviteResponse - колбэк на ответ (busy/decline)
+ */
+export function initPersonalChannel(userId, onIncomingInvite, onInviteResponse) {
+  _ensureInitialized();
+  if (personalChannel) {
+    supabase.removeChannel(personalChannel);
+  }
+
+  log('Signaling', `📞 Подписка на личный канал вызовов: user-calls:${userId}`);
+  personalChannel = supabase.channel(`user-calls:${userId}`);
+
+  personalChannel
+    .on('broadcast', { event: 'call-invite' }, (payload) => {
+      log('Signaling', `📥 Получено приглашение от ${payload.payload.callerName}`);
+      onIncomingInvite(payload.payload); // { roomId, callerName, callerId }
+    })
+    .on('broadcast', { event: 'call-response' }, (payload) => {
+      log('Signaling', `📥 Получен ответ на вызов: ${payload.payload.type}`);
+      onInviteResponse(payload.payload); // { type, friendId }
+    })
+    .subscribe();
+}
+
+/**
+ * Удаляет личную подписку (при выходе из профиля).
+ */
+export function destroyPersonalChannel() {
+  if (personalChannel && supabase) {
+    supabase.removeChannel(personalChannel);
+    personalChannel = null;
+    log('Signaling', '📴 Личный канал отключен.');
+  }
+}
+
+/**
+ * Отправляет приглашение другу.
+ * @param {string} friendId - UUID друга
+ * @param {string} roomId - ID сгенерированной комнаты
+ * @param {object} myProfile - Профиль звонящего { id, nickname }
+ */
+export async function sendCallInvite(friendId, roomId, myProfile) {
+  _ensureInitialized();
+  log('Signaling', `📤 Отправка вызова другу ${friendId} в комнату ${roomId}...`);
+
+  const targetChannel = supabase.channel(`user-calls:${friendId}`);
+  targetChannel.subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') {
+      try {
+        await targetChannel.send({
+          type: 'broadcast',
+          event: 'call-invite',
+          payload: {
+            roomId,
+            callerName: myProfile.nickname,
+            callerId: myProfile.id
+          }
+        });
+        log('Signaling', `✅ Вызов для ${friendId} отправлен.`);
+      } catch (err) {
+        log('Signaling', `❌ Ошибка отправки вызова: ${err.message}`);
+      } finally {
+        supabase.removeChannel(targetChannel);
+      }
+    }
+  });
+}
+
+/**
+ * Отправляет ответ на вызов (decline или busy).
+ * @param {string} callerId - UUID вызывающего
+ * @param {'decline' | 'busy'} type - тип ответа
+ * @param {string} myProfileId - UUID текущего пользователя
+ */
+export async function sendCallResponse(callerId, type, myProfileId) {
+  _ensureInitialized();
+  log('Signaling', `📤 Отправка ответа (${type}) для ${callerId}...`);
+
+  const targetChannel = supabase.channel(`user-calls:${callerId}`);
+  targetChannel.subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') {
+      try {
+        await targetChannel.send({
+          type: 'broadcast',
+          event: 'call-response',
+          payload: {
+            type,
+            friendId: myProfileId
+          }
+        });
+        log('Signaling', `✅ Ответ (${type}) отправлен.`);
+      } catch (err) {
+        log('Signaling', `❌ Ошибка отправки ответа: ${err.message}`);
+      } finally {
+        supabase.removeChannel(targetChannel);
+      }
+    }
+  });
+}
+

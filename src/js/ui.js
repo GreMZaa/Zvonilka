@@ -11,7 +11,16 @@
  * - Тактильную отдачу (Haptic/Vibration) при входящем звонке
  */
 
-import { createRoom, joinRoom, cleanup, getState as getSignalingState, onPeerPresenceChange } from './signaling.js';
+import {
+  createRoom,
+  joinRoom,
+  cleanup,
+  getState as getSignalingState,
+  onPeerPresenceChange,
+  initPersonalChannel,
+  sendCallInvite,
+  sendCallResponse
+} from './signaling.js';
 import { startCall, prepareToReceiveCall, acceptIncomingCall, hangUp, onConnectionStateChange, toggleMute, onQualityChange, setMicrophoneId } from './webrtc.js';
 import { log } from './utils.js';
 import { 
@@ -23,6 +32,17 @@ import {
   playDisconnectTone,
   setRingtoneVolume
 } from './audio-effects.js';
+import {
+  getLocalProfile,
+  createProfile,
+  updateLocalNickname,
+  loadFriends,
+  addFriendByCode,
+  removeFriend,
+  subscribeToFriends,
+  initPresence
+} from './profile.js';
+
 
 // === Кэш DOM-элементов ===
 let appEl = null;
@@ -58,11 +78,43 @@ let btnTestMicEl = null;
 let micMeterBarEl = null;
 let btnSaveSettingsEl = null;
 
+// Профиль и друзья (Новые)
+let onboardingModalEl = null;
+let inputOnboardNicknameEl = null;
+let onboardErrorEl = null;
+let btnSaveOnboardEl = null;
+
+let myNicknameEl = null;
+let myCodeEl = null;
+let btnCopyMyCodeEl = null;
+
+let inputFriendCodeEl = null;
+let btnAddFriendEl = null;
+let addFriendErrorEl = null;
+
+let friendsListEl = null;
+
+let btnToggleManualJoinEl = null;
+let manualJoinFormEl = null;
+
+let btnBackToSidebarEl = null;
+let inputEditNicknameEl = null;
+
+let workspaceIdleStateEl = null;
+let workspaceActiveStateEl = null;
+let workspaceTitleEl = null;
+
+
 // === Внутреннее состояние UI ===
 let timerInterval = null;
 let timerSeconds = 0;
 let vibrationInterval = null;
 let isCallActive = false; // Отслеживает, был ли звонок соединен
+let currentCallPeerName = '';
+let incomingCallRoomId = null;
+let incomingCallCallerId = null;
+let callingTimeoutId = null;
+
 
 /**
  * Инициализирует интерфейс, кэширует элементы и настраивает слушатели событий.
@@ -100,6 +152,33 @@ export function initUI() {
   btnTestMicEl = document.getElementById('btn-test-mic');
   micMeterBarEl = document.getElementById('mic-meter-bar');
   btnSaveSettingsEl = document.getElementById('btn-save-settings');
+
+  // Инициализируем новые DOM-элементы профиля и друзей
+  onboardingModalEl = document.getElementById('onboarding-modal');
+  inputOnboardNicknameEl = document.getElementById('input-onboard-nickname');
+  onboardErrorEl = document.getElementById('onboard-error');
+  btnSaveOnboardEl = document.getElementById('btn-save-onboard');
+
+  myNicknameEl = document.getElementById('my-nickname');
+  myCodeEl = document.getElementById('my-code');
+  btnCopyMyCodeEl = document.getElementById('btn-copy-my-code');
+
+  inputFriendCodeEl = document.getElementById('input-friend-code');
+  btnAddFriendEl = document.getElementById('btn-add-friend');
+  addFriendErrorEl = document.getElementById('add-friend-error');
+
+  friendsListEl = document.getElementById('friends-list');
+
+  btnToggleManualJoinEl = document.getElementById('btn-toggle-manual-join');
+  manualJoinFormEl = document.getElementById('manual-join-form');
+
+  btnBackToSidebarEl = document.getElementById('btn-back-to-sidebar');
+  inputEditNicknameEl = document.getElementById('input-edit-nickname');
+
+  workspaceIdleStateEl = document.getElementById('workspace-idle-state');
+  workspaceActiveStateEl = document.getElementById('workspace-active-state');
+  workspaceTitleEl = document.getElementById('workspace-title');
+
 
   if (!appEl) {
     log('UI', '❌ Критическая ошибка: корневой элемент #app не найден.');
@@ -146,6 +225,13 @@ export function initUI() {
     if (rangeVolumeEl) rangeVolumeEl.value = vol;
   }
 
+  // Обработчики для профиля и друзей
+  if (btnSaveOnboardEl) safeBind(btnSaveOnboardEl, 'click', _handleSaveOnboardClick);
+  if (btnCopyMyCodeEl) safeBind(btnCopyMyCodeEl, 'click', _handleCopyMyCodeClick);
+  if (btnAddFriendEl) safeBind(btnAddFriendEl, 'click', _handleFriendAddClick);
+  if (btnToggleManualJoinEl) safeBind(btnToggleManualJoinEl, 'click', _handleToggleManualJoinClick);
+  if (btnBackToSidebarEl) safeBind(btnBackToSidebarEl, 'click', _handleBackToSidebarClick);
+
   // Подписка на статусы WebRTC
   onConnectionStateChange((state) => {
     _transitionToState(state);
@@ -164,6 +250,17 @@ export function initUI() {
   // Инициализируем начальный экран (idle)
   _transitionToState('closed');
   _renderHistory();
+
+  // Проверяем наличие локального профиля
+  const profile = getLocalProfile();
+  if (!profile) {
+    if (onboardingModalEl) {
+      onboardingModalEl.classList.remove('hidden');
+    }
+    log('UI', 'ℹ️ Профиль отсутствует. Отображается экран онбординга.');
+  } else {
+    _onProfileLoaded(profile);
+  }
 
   log('UI', '✅ Интерфейс и обработчики событий настроены.');
 }
@@ -229,6 +326,25 @@ function _transitionToState(state) {
   // Получаем текущие данные сигналинга
   const sigState = getSignalingState();
 
+  // Управление отображением панелей рабочей области (split-pane)
+  if (state === 'closed' || state === 'idle') {
+    _show(workspaceIdleStateEl);
+    _hide(workspaceActiveStateEl);
+    _updateText(workspaceTitleEl, 'Звонилка');
+    if (appEl) appEl.classList.remove('show-workspace');
+    
+    // Сбрасываем таймер таймаута вызова
+    if (callingTimeoutId) {
+      clearTimeout(callingTimeoutId);
+      callingTimeoutId = null;
+    }
+  } else {
+    _hide(workspaceIdleStateEl);
+    _show(workspaceActiveStateEl);
+    _updateText(workspaceTitleEl, currentCallPeerName || 'Звонилка');
+    if (appEl) appEl.classList.add('show-workspace');
+  }
+
   // 2. Обновляем элементы управления и тексты
   switch (state) {
     case 'closed':
@@ -237,7 +353,7 @@ function _transitionToState(state) {
       _hide(callTimerEl);
       _hide(roomBadgeEl);
       _show(joinSectionEl);
-      _show(historySectionEl); // Показываем секцию истории в меню
+      _show(historySectionEl); // Показываем секцию истории
       
       _show(actionIdleEl);
       _hide(actionActiveEl);
@@ -246,13 +362,13 @@ function _transitionToState(state) {
 
     case 'connecting':
       const isCaller = sigState.role === 'caller';
-      _updateText(callStatusEl, isCaller ? 'Звоним маме...' : 'Подключение...');
+      _updateText(callStatusEl, isCaller ? 'Вызов...' : 'Подключение...');
       _hide(callTimerEl);
       _show(roomBadgeEl);
       _updateText(roomCodeEl, sigState.roomId || '------');
       _hide(joinSectionEl);
-      _hide(historySectionEl); // Скрываем историю во время звонка
-      _show(callMetaEl); // Показываем онлайн-статус и качество связи
+      _hide(historySectionEl);
+      _show(callMetaEl);
       
       _hide(actionIdleEl);
       _show(actionActiveEl);
@@ -265,7 +381,7 @@ function _transitionToState(state) {
       break;
 
     case 'connected':
-      isCallActive = true; // Отмечаем, что звонок успешно начался
+      isCallActive = true;
       _updateText(callStatusEl, 'На связи');
       _show(callTimerEl);
       _startTimer();
@@ -273,18 +389,24 @@ function _transitionToState(state) {
       _updateText(roomCodeEl, sigState.roomId || '------');
       _hide(joinSectionEl);
       _hide(historySectionEl);
-      _show(callMetaEl); // Показываем онлайн-статус и качество связи
+      _show(callMetaEl);
       
       _hide(actionIdleEl);
       _show(actionActiveEl);
       _hide(actionIncomingEl);
+
+      // Очищаем таймаут ожидания при успешном соединении
+      if (callingTimeoutId) {
+        clearTimeout(callingTimeoutId);
+        callingTimeoutId = null;
+      }
 
       // Проигрываем звук подключения
       playConnectTone();
       break;
 
     case 'incoming':
-      _updateText(callStatusEl, 'Мама звонит!');
+      _updateText(callStatusEl, 'Входящий вызов...');
       _hide(callTimerEl);
       _show(roomBadgeEl);
       _updateText(roomCodeEl, sigState.roomId || '------');
@@ -296,12 +418,10 @@ function _transitionToState(state) {
       _hide(actionActiveEl);
       _show(actionIncomingEl);
       
-      // Запускаем вибрацию и рингтон входящего звонка
       _startVibration();
       playRingtone();
 
-      // Показываем браузерное уведомление
-      _showNotification('Входящий вызов 📞', 'Мама звонит! Откройте приложение, чтобы ответить.');
+      _showNotification('Входящий вызов 📞', `${currentCallPeerName || 'Кто-то'} звонит! Откройте приложение, чтобы ответить.`);
       break;
 
     case 'failed':
@@ -314,7 +434,6 @@ function _transitionToState(state) {
       _show(actionActiveEl);
       _addSignalLog('❌ Соединение не удалось установить или оборвалось.');
 
-      // Проигрываем звук сброса/ошибки
       playDisconnectTone();
       break;
 
@@ -327,7 +446,6 @@ function _transitionToState(state) {
       _show(actionActiveEl);
       _addSignalLog('⏳ Превышено время ожидания ответа.');
 
-      // Проигрываем звук сброса/ошибки
       playDisconnectTone();
       break;
 
@@ -340,7 +458,6 @@ function _transitionToState(state) {
       _show(actionActiveEl);
       _addSignalLog('⚠️ Ошибка: запрещен доступ к микрофону.');
 
-      // Проигрываем звук сброса/ошибки
       playDisconnectTone();
       break;
 
@@ -727,7 +844,7 @@ function _handleCloseSettingsClick() {
  * Сохраняет настройки и закрывает окно.
  * @private
  */
-function _handleSaveSettingsClick() {
+async function _handleSaveSettingsClick() {
   if (selectMicEl) {
     const selectedMic = selectMicEl.value;
     localStorage.setItem('zvonilka_microphone_id', selectedMic);
@@ -738,6 +855,21 @@ function _handleSaveSettingsClick() {
     const volume = parseFloat(rangeVolumeEl.value);
     localStorage.setItem('zvonilka_ringtone_volume', String(volume));
     setRingtoneVolume(volume);
+  }
+
+  if (inputEditNicknameEl) {
+    const newNickname = inputEditNicknameEl.value.trim();
+    const profile = getLocalProfile();
+    if (profile && newNickname && newNickname !== profile.nickname) {
+      try {
+        const updated = await updateLocalNickname(newNickname);
+        if (myNicknameEl) myNicknameEl.textContent = updated.nickname;
+        _addSignalLog('⚙️ Имя профиля успешно обновлено.');
+      } catch (err) {
+        log('UI', `⚠️ Не удалось обновить никнейм: ${err.message}`);
+        alert(`Ошибка обновления имени: ${err.message}`);
+      }
+    }
   }
 
   log('UI', '✅ Настройки успешно сохранены.');
@@ -928,4 +1060,383 @@ function _showNotification(title, body) {
     });
   }
 }
+
+// ===================================
+// Профиль и список друзей (Добавление/Звонки)
+// ===================================
+
+/**
+ * Инициализация при первой загрузке профиля.
+ * @private
+ */
+function _onProfileLoaded(profile) {
+  if (myNicknameEl) myNicknameEl.textContent = profile.nickname;
+  if (myCodeEl) myCodeEl.textContent = profile.user_code;
+  if (inputEditNicknameEl) inputEditNicknameEl.value = profile.nickname;
+
+  // Инициализируем личный WebSocket-канал для входящих звонков
+  initPersonalChannel(
+    profile.id,
+    (invite) => _handleIncomingInvite(invite),
+    (response) => _handleInviteResponse(response)
+  );
+
+  // Инициализируем глобальное присутствие
+  initPresence(profile, (presenceState) => {
+    _handlePresenceSync(presenceState);
+  });
+
+  // Загружаем список друзей и подписываемся на его изменения
+  _updateFriendsList();
+  subscribeToFriends(() => {
+    _updateFriendsList();
+  });
+}
+
+/**
+ * Рендерит и обновляет список друзей.
+ * @private
+ */
+async function _updateFriendsList() {
+  if (!friendsListEl) return;
+
+  try {
+    const friends = await loadFriends();
+    if (!friends || friends.length === 0) {
+      friendsListEl.innerHTML = '<div class="friends-empty">Список друзей пуст. Добавьте друга по его коду выше!</div>';
+      return;
+    }
+
+    friendsListEl.innerHTML = '';
+    
+    // Получаем список онлайн-пользователей из присутствия
+    const onlineIds = window.__onlineUsers || new Set();
+
+    friends.forEach(friend => {
+      const isOnline = onlineIds.has(friend.id);
+      const presenceClass = isOnline ? 'online' : '';
+      const presenceText = isOnline ? 'В сети' : 'Не в сети';
+
+      const friendItem = document.createElement('div');
+      friendItem.className = 'friend-item';
+      friendItem.innerHTML = `
+        <div class="friend-info">
+          <div class="presence-dot ${presenceClass}" title="${presenceText}"></div>
+          <span class="friend-name">${friend.nickname}</span>
+        </div>
+        <div class="friend-actions">
+          <button class="btn-friend-call" title="Позвонить">📞</button>
+          <button class="btn-friend-delete" title="Удалить">🗑️</button>
+        </div>
+      `;
+
+      // Привязываем события
+      friendItem.querySelector('.btn-friend-call').addEventListener('click', (e) => {
+        e.stopPropagation();
+        _initiateDirectCall(friend.id, friend.nickname);
+      });
+
+      friendItem.querySelector('.btn-friend-delete').addEventListener('click', (e) => {
+        e.stopPropagation();
+        _deleteFriend(friend.id, friend.nickname);
+      });
+
+      // При клике на элемент открывается чат (workspace)
+      friendItem.addEventListener('click', () => {
+        _openWorkspaceForFriend(friend.nickname);
+      });
+
+      friendsListEl.appendChild(friendItem);
+    });
+  } catch (err) {
+    log('UI', `⚠️ Ошибка рендеринга списка друзей: ${err.message}`);
+    friendsListEl.innerHTML = '<div class="error-msg">Ошибка загрузки списка друзей</div>';
+  }
+}
+
+/**
+ * Обработчик создания нового профиля при онбординге.
+ * @private
+ */
+async function _handleSaveOnboardClick() {
+  if (!inputOnboardNicknameEl || !btnSaveOnboardEl) return;
+
+  const nickname = inputOnboardNicknameEl.value.trim();
+  if (!nickname) {
+    if (onboardErrorEl) {
+      onboardErrorEl.textContent = 'Имя не должно быть пустым!';
+      onboardErrorEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  btnSaveOnboardEl.disabled = true;
+  btnSaveOnboardEl.textContent = 'Создание...';
+
+  try {
+    const profile = await createProfile(nickname);
+    if (onboardErrorEl) onboardErrorEl.classList.add('hidden');
+    if (onboardingModalEl) onboardingModalEl.classList.add('hidden');
+    
+    _onProfileLoaded(profile);
+  } catch (err) {
+    log('UI', `❌ Ошибка создания профиля: ${err.message}`);
+    if (onboardErrorEl) {
+      onboardErrorEl.textContent = `Ошибка: ${err.message}`;
+      onboardErrorEl.classList.remove('hidden');
+    }
+  } finally {
+    btnSaveOnboardEl.disabled = false;
+    btnSaveOnboardEl.textContent = 'Создать профиль';
+  }
+}
+
+/**
+ * Копирование кода пользователя.
+ * @private
+ */
+function _handleCopyMyCodeClick() {
+  const profile = getLocalProfile();
+  if (profile && profile.user_code) {
+    navigator.clipboard.writeText(profile.user_code)
+      .then(() => {
+        _addSignalLog('📋 Ваш код друга скопирован в буфер');
+        if (btnCopyMyCodeEl) {
+          btnCopyMyCodeEl.style.transform = 'scale(1.3)';
+          setTimeout(() => btnCopyMyCodeEl.style.transform = '', 200);
+        }
+      })
+      .catch(err => log('UI', `Не удалось скопировать: ${err.message}`));
+  }
+}
+
+/**
+ * Добавление друга по 6-значному коду.
+ * @private
+ */
+async function _handleFriendAddClick() {
+  if (!inputFriendCodeEl || !btnAddFriendEl) return;
+
+  const code = inputFriendCodeEl.value.trim();
+  if (!code || code.length !== 6) {
+    if (addFriendErrorEl) {
+      addFriendErrorEl.textContent = 'Введите корректный 6-значный код.';
+      addFriendErrorEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  btnAddFriendEl.disabled = true;
+  btnAddFriendEl.textContent = '⏳';
+
+  try {
+    await addFriendByCode(code);
+    inputFriendCodeEl.value = '';
+    if (addFriendErrorEl) addFriendErrorEl.classList.add('hidden');
+    _addSignalLog('✅ Друг успешно добавлен!');
+    _updateFriendsList();
+  } catch (err) {
+    log('UI', `⚠️ Ошибка добавления друга: ${err.message}`);
+    if (addFriendErrorEl) {
+      addFriendErrorEl.textContent = err.message;
+      addFriendErrorEl.classList.remove('hidden');
+    }
+  } finally {
+    btnAddFriendEl.disabled = false;
+    btnAddFriendEl.textContent = '+';
+  }
+}
+
+/**
+ * Удаление друга.
+ * @private
+ */
+async function _deleteFriend(friendId, friendNickname) {
+  if (confirm(`Вы уверены, что хотите удалить друга "${friendNickname}"?`)) {
+    try {
+      await removeFriend(friendId);
+      _addSignalLog(`🗑️ Друг ${friendNickname} удален.`);
+      _updateFriendsList();
+    } catch (err) {
+      log('UI', `❌ Не удалось удалить друга: ${err.message}`);
+      alert(`Ошибка удаления: ${err.message}`);
+    }
+  }
+}
+
+/**
+ * Переключает отображение формы ручного входа в комнату.
+ * @private
+ */
+function _handleToggleManualJoinClick() {
+  if (!manualJoinFormEl || !btnToggleManualJoinEl) return;
+
+  const isHidden = manualJoinFormEl.classList.toggle('hidden');
+  if (isHidden) {
+    btnToggleManualJoinEl.textContent = 'Вход по коду комнаты ▾';
+  } else {
+    btnToggleManualJoinEl.textContent = 'Вход по коду комнаты ▴';
+  }
+}
+
+/**
+ * Возврат на боковую панель на мобильных устройствах.
+ * @private
+ */
+function _handleBackToSidebarClick() {
+  if (appEl) appEl.classList.remove('show-workspace');
+  _transitionToState('closed');
+}
+
+/**
+ * Открывает пустую рабочую область для друга.
+ * @private
+ */
+function _openWorkspaceForFriend(friendNickname) {
+  currentCallPeerName = friendNickname;
+  if (workspaceTitleEl) workspaceTitleEl.textContent = friendNickname;
+  if (appEl) appEl.classList.add('show-workspace');
+}
+
+/**
+ * Инициация прямого вызова через broadcast.
+ * @private
+ */
+async function _initiateDirectCall(friendId, friendNickname) {
+  if (getSignalingState().role) {
+    alert('Вы уже участвуете в вызове или ожидании!');
+    return;
+  }
+
+  currentCallPeerName = friendNickname;
+  _addSignalLog(`📞 Вызов друга: ${friendNickname}...`);
+  
+  if (appEl) appEl.classList.add('show-workspace');
+  _transitionToState('connecting');
+
+  try {
+    const roomId = await createRoom();
+    await startCall(roomId);
+
+    // Отправляем вызов через Supabase Broadcast
+    await sendCallInvite(friendId, roomId, getLocalProfile());
+
+    // Устанавливаем лимит ожидания 25 секунд
+    callingTimeoutId = setTimeout(() => {
+      _addSignalLog('⏳ Собеседник не отвечает.');
+      _transitionToState('timeout');
+      hangUp(true);
+    }, 25000);
+
+  } catch (err) {
+    log('UI', `❌ Ошибка инициации прямого вызова: ${err.message}`);
+    _transitionToState('failed');
+    hangUp(true);
+  }
+}
+
+/**
+ * Входящий звонок от друга (Supabase Broadcast).
+ * @private
+ */
+function _handleIncomingInvite(invite) {
+  const sigState = getSignalingState();
+  const myProfile = getLocalProfile();
+
+  // Если уже разговариваем или звоним сами
+  if (sigState.role || isCallActive) {
+    log('UI', `⚠️ Занят: отклоняем вызов от ${invite.callerName}`);
+    sendCallResponse(invite.callerId, 'busy', myProfile.id);
+    return;
+  }
+
+  currentCallPeerName = invite.callerName;
+  incomingCallRoomId = invite.roomId;
+  incomingCallCallerId = invite.callerId;
+
+  log('UI', `📞 Входящий вызов от ${invite.callerName}`);
+  _transitionToState('incoming');
+}
+
+/**
+ * Ответ друга на наш исходящий звонок (Supabase Broadcast).
+ * @private
+ */
+function _handleInviteResponse(response) {
+  const sigState = getSignalingState();
+  
+  // Реагируем только если мы в состоянии вызова (caller)
+  if (sigState.role !== 'caller') return;
+
+  if (callingTimeoutId) {
+    clearTimeout(callingTimeoutId);
+    callingTimeoutId = null;
+  }
+
+  if (response.type === 'decline') {
+    _addSignalLog('📴 Собеседник отклонил вызов.');
+    _updateText(callStatusEl, 'Отклонено');
+    playDisconnectTone();
+    setTimeout(() => {
+      _transitionToState('closed');
+      hangUp(true);
+    }, 2000);
+  } else if (response.type === 'busy') {
+    _addSignalLog('📴 Собеседник занят.');
+    _updateText(callStatusEl, 'Линия занята');
+    playDisconnectTone();
+    setTimeout(() => {
+      _transitionToState('closed');
+      hangUp(true);
+    }, 2000);
+  }
+}
+
+/**
+ * Обновление статусов присутствия друзей.
+ * @private
+ */
+function _handlePresenceSync(presenceState) {
+  const onlineIds = new Set();
+  
+  Object.keys(presenceState).forEach(key => {
+    const list = presenceState[key];
+    if (list && list.length > 0) {
+      const payload = list[0]; // { user_id, nickname }
+      if (payload && payload.user_id) {
+        onlineIds.add(payload.user_id);
+      }
+    }
+  });
+
+  // Записываем в глобальную переменную для рендерера списка друзей
+  window.__onlineUsers = onlineIds;
+  
+  // Обновляем отображение списка друзей без перезагрузки всей базы данных
+  const items = document.querySelectorAll('.friend-item');
+  items.forEach(item => {
+    const nameEl = item.querySelector('.friend-name');
+    if (!nameEl) return;
+    
+    // Ищем соответствующего друга по имени среди друзей
+    loadFriends().then(friends => {
+      if (!friends) return;
+      const friend = friends.find(f => f.nickname === nameEl.textContent);
+      if (friend) {
+        const dot = item.querySelector('.presence-dot');
+        if (dot) {
+          const isOnline = onlineIds.has(friend.id);
+          if (isOnline) {
+            dot.className = 'presence-dot online';
+            dot.title = 'В сети';
+          } else {
+            dot.className = 'presence-dot';
+            dot.title = 'Не в сети';
+          }
+        }
+      }
+    });
+  });
+}
+
 

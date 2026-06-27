@@ -39,133 +39,203 @@
 
   <div id="app" class="app-container state-idle">
     
-    <!-- Header -->
-    <header class="app-header">
-      <div class="logo">
-        <span class="logo__icon">✨</span>
-        <span class="logo__text">ЗВОНИЛКА</span>
-      </div>
-      <div class="header-controls">
-        <div id="room-badge" class="room-badge hidden">
-          <span class="room-badge__label">Код:</span>
-          <code id="room-code" class="room-badge__code">------</code>
-          <button id="btn-copy" class="room-badge__copy" aria-label="Копировать код">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-          </button>
-        </div>
-        <button id="btn-settings" class="btn-settings-toggle" aria-label="Настройки">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        </button>
-      </div>
-    </header>
-
-    <!-- Main Content Area -->
-    <main class="app-main">
+    <!-- Split Pane Layout -->
+    <div class="split-pane">
       
-      <!-- Status & Timer display -->
-      <div class="status-container">
-        <h2 id="call-status" class="status-text">Готов к звонку</h2>
-        <div id="call-timer" class="timer-text hidden">00:00</div>
-        
-        <!-- Quality and online badges -->
-        <div id="call-meta" class="call-meta hidden">
-          <span id="peer-status" class="peer-status">● Не в сети</span>
-          <span id="conn-quality" class="conn-quality">📶 Ожидание</span>
-        </div>
-      </div>
-
-      <!-- Interactive Breathing Fluid Orb / Visualizer -->
-      <div class="visualizer-container">
-        <div class="pulse-ring pulse-ring--1"></div>
-        <div class="pulse-ring pulse-ring--2"></div>
-        <div class="pulse-ring pulse-ring--3"></div>
-        
-        <div class="fluid-orb-wrapper">
-          <div class="fluid-orb">
-            <!-- Morphing dynamic SVG overlay -->
-            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="orb-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="var(--gradient-start)" />
-                  <stop offset="100%" stop-color="var(--gradient-end)" />
-                </linearGradient>
-              </defs>
-              <path fill="url(#orb-gradient)" d="M45.7,-64.1C58.8,-55.8,68.9,-42.1,74,-26.8C79.1,-11.5,79.2,5.2,74.9,20.8C70.6,36.4,61.9,50.7,49.2,60.1C36.4,69.5,19.6,73.9,2.6,70.3C-14.4,66.8,-31.6,55.2,-45.3,42.5C-59.1,29.8,-69.5,15.9,-71,-0.9C-72.6,-17.7,-65.4,-37.4,-51.9,-45.8C-38.4,-54.2,-18.6,-61.3,-0.6,-60.5C17.4,-59.6,32.6,-72.4,45.7,-64.1Z" transform="translate(100 100)" />
-            </svg>
+      <!-- Left Panel: Profile and Friends -->
+      <aside class="app-sidebar" id="app-sidebar">
+        <!-- Sidebar Header: Profile info -->
+        <div class="sidebar-header">
+          <div class="profile-summary">
+            <span class="avatar-stub">👤</span>
+            <div class="profile-details">
+              <span id="my-nickname" class="my-nickname">Профиль</span>
+              <span id="my-code-container" class="my-code-container">Код: <strong id="my-code">------</strong> <button id="btn-copy-my-code" class="btn-copy-code" title="Копировать код">📋</button></span>
+            </div>
           </div>
-          <div class="orb-icon">📞</div>
-        </div>
-      </div>
-
-      <!-- Interaction Form (Join Room) -->
-      <div id="join-section" class="join-section">
-        <p class="join-section__title">Принять входящий вызов</p>
-        <div class="join-control">
-          <input
-            id="input-room"
-            type="text"
-            class="input-room"
-            placeholder="Введи 8-значный код..."
-            maxlength="8"
-            autocomplete="off"
-            pattern="[a-zA-Z0-9]*"
-            inputmode="text"
-          />
-          <button id="btn-join" class="btn-action btn-action--secondary" aria-label="Присоединиться">
-            Войти
+          <button id="btn-settings" class="btn-settings-toggle" aria-label="Открыть настройки">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           </button>
         </div>
-      </div>
 
-      <!-- Call History Overlay (collapsed by default) -->
-      <div id="history-section" class="history-section">
-        <button id="btn-toggle-history" class="btn-history-toggle">⏳ История звонков</button>
-        <div id="history-list" class="history-list hidden">
-          <!-- Записи истории звонков будут вставляться динамически через JS -->
+        <!-- Add Friend Form -->
+        <div class="add-friend-section">
+          <span class="section-title">Добавить друга</span>
+          <div class="add-friend-control">
+            <input type="text" id="input-friend-code" placeholder="Введи 6-значный код..." maxlength="6" inputmode="numeric" pattern="[0-9]*" />
+            <button id="btn-add-friend" class="btn-add-friend" title="Добавить">+</button>
+          </div>
+          <span id="add-friend-error" class="error-msg hidden"></span>
         </div>
-      </div>
 
-    </main>
-
-    <!-- Bottom Controls Area -->
-    <footer class="app-footer">
+        <!-- Friends List scroll area -->
+        <div class="friends-list-container">
+          <span class="section-title">Друзья</span>
+          <div id="friends-list" class="friends-list">
+            <div class="friends-empty">Список друзей пуст. Добавьте друга по его коду выше!</div>
+          </div>
+        </div>
+        
+        <!-- Manual Room Code Join (Collapsible) -->
+        <div class="manual-join-section">
+          <button id="btn-toggle-manual-join" class="btn-manual-toggle">Вход по коду комнаты ▾</button>
+          <div id="manual-join-form" class="manual-join-form hidden">
+            <div class="join-control">
+              <input
+                id="input-room"
+                type="text"
+                class="input-room"
+                placeholder="Введи 8-значный код..."
+                maxlength="8"
+                autocomplete="off"
+                pattern="[a-zA-Z0-9]*"
+                inputmode="text"
+              />
+              <button id="btn-join" class="btn-action btn-action--secondary" aria-label="Присоединиться">
+                Войти
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
       
-      <!-- Idle State Action -->
-      <div id="action-idle" class="action-group">
-        <button id="btn-call" class="btn-main">
-          Позвонить маме
-        </button>
-      </div>
+      <!-- Right Panel: Active Call workspace and History -->
+      <main class="app-workspace" id="app-workspace">
+        
+        <!-- Workspace Header (Visible on active call or mobile) -->
+        <header class="workspace-header">
+          <button id="btn-back-to-sidebar" class="btn-back-to-sidebar hidden">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          </button>
+          
+          <div class="workspace-title-container">
+            <span id="workspace-title" class="workspace-title">Звонилка</span>
+            <div id="call-meta" class="call-meta hidden">
+              <span id="peer-status" class="peer-status">● Не в сети</span>
+              <span id="conn-quality" class="conn-quality">📶 Ожидание</span>
+            </div>
+          </div>
 
-      <!-- Calling / Connected State Actions (Mute & Hangup) -->
-      <div id="action-active" class="action-group hidden">
-        <button id="btn-mute" class="btn-round btn-round--mute" aria-label="Выключить микрофон">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-        </button>
-        <button id="btn-hangup" class="btn-round btn-round--danger" aria-label="Сбросить звонок">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.68 13.31a16 16 0 0 0 3.41 3.41l2.28-2.28a1 1 0 0 1 1.14-.24 11.54 11.54 0 0 0 4.28 1.39 1 1 0 0 1 .91 1v3.79a1 1 0 0 1-.96 1A20.84 20.84 0 0 1 2 4.04a1 1 0 0 1 1-1h3.79a1 1 0 0 1 1 .91 11.54 11.54 0 0 0 1.39 4.28 1 1 0 0 1-.24 1.14l-2.28 2.28z"></path></svg>
-        </button>
-      </div>
+          <div id="room-badge" class="room-badge hidden">
+            <span class="room-badge__label">Код:</span>
+            <code id="room-code" class="room-badge__code">------</code>
+            <button id="btn-copy" class="room-badge__copy" aria-label="Копировать код">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+          </div>
+        </header>
 
-      <!-- Incoming Call State Actions -->
-      <div id="action-incoming" class="action-group hidden">
-        <button id="btn-decline" class="btn-round btn-round--danger" aria-label="Отклонить">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.68 13.31a16 16 0 0 0 3.41 3.41l2.28-2.28a1 1 0 0 1 1.14-.24 11.54 11.54 0 0 0 4.28 1.39 1 1 0 0 1 .91 1v3.79a1 1 0 0 1-.96 1A20.84 20.84 0 0 1 2 4.04a1 1 0 0 1 1-1h3.79a1 1 0 0 1 1 .91 11.54 11.54 0 0 0 1.39 4.28 1 1 0 0 1-.24 1.14l-2.28 2.28z"></path></svg>
-        </button>
-        <button id="btn-accept" class="btn-round btn-round--success" aria-label="Ответить">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-        </button>
-      </div>
+        <!-- Workspace content: scrollable area -->
+        <div class="workspace-content" id="workspace-content">
+          
+          <!-- Idle / Default State: History -->
+          <div id="workspace-idle-state" class="workspace-idle-state">
+            <div class="idle-placeholder">
+              <span class="placeholder-icon">✨</span>
+              <p>Выберите друга для звонка или добавьте нового по коду.</p>
+            </div>
+            
+            <!-- Call History section -->
+            <div class="history-section">
+              <span class="section-title">⏳ История звонков</span>
+              <div id="history-list" class="history-list">
+                <!-- dynamic entries -->
+              </div>
+            </div>
+          </div>
 
-    </footer>
+          <!-- Active Call view -->
+          <div id="workspace-active-state" class="workspace-active-state hidden">
+            <div class="status-container">
+              <h2 id="call-status" class="status-text">Готов к звонку</h2>
+              <div id="call-timer" class="timer-text hidden">00:00</div>
+            </div>
 
-    <!-- Signal logging (useful for debugging, minimized by default, can be toggled or styled elegantly) -->
-    <div id="debug-log-wrapper" class="debug-log-wrapper collapsed">
-      <button id="btn-toggle-log" class="btn-toggle-log">Детали соединения ▾</button>
-      <div id="signal-log" class="signal-log"></div>
+            <!-- Orb Visualizer -->
+            <div class="visualizer-container">
+              <div class="pulse-ring pulse-ring--1"></div>
+              <div class="pulse-ring pulse-ring--2"></div>
+              <div class="pulse-ring pulse-ring--3"></div>
+              <div class="fluid-orb-wrapper">
+                <div class="fluid-orb">
+                  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="orb-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="var(--gradient-start)" />
+                        <stop offset="100%" stop-color="var(--gradient-end)" />
+                      </linearGradient>
+                    </defs>
+                    <path fill="url(#orb-gradient)" d="M45.7,-64.1C58.8,-55.8,68.9,-42.1,74,-26.8C79.1,-11.5,79.2,5.2,74.9,20.8C70.6,36.4,61.9,50.7,49.2,60.1C36.4,69.5,19.6,73.9,2.6,70.3C-14.4,66.8,-31.6,55.2,-45.3,42.5C-59.1,29.8,-69.5,15.9,-71,-0.9C-72.6,-17.7,-65.4,-37.4,-51.9,-45.8C-38.4,-54.2,-18.6,-61.3,-0.6,-60.5C17.4,-59.6,32.6,-72.4,45.7,-64.1Z" transform="translate(100 100)" />
+                  </svg>
+                </div>
+                <div class="orb-icon">📞</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer Call Controls -->
+        <footer class="workspace-footer">
+          
+          <!-- Idle State Action (Hidden by default, used as backup) -->
+          <div id="action-idle" class="action-group hidden">
+            <button id="btn-call" class="btn-main">Позвонить маме</button>
+          </div>
+
+          <!-- Calling / Connected State Actions -->
+          <div id="action-active" class="action-group hidden">
+            <button id="btn-mute" class="btn-round btn-round--mute" aria-label="Выключить микрофон">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            </button>
+            <button id="btn-hangup" class="btn-round btn-round--danger" aria-label="Сбросить звонок">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.68 13.31a16 16 0 0 0 3.41 3.41l2.28-2.28a1 1 0 0 1 1.14-.24 11.54 11.54 0 0 0 4.28 1.39 1 1 0 0 1 .91 1v3.79a1 1 0 0 1-.96 1A20.84 20.84 0 0 1 2 4.04a1 1 0 0 1 1-1h3.79a1 1 0 0 1 1 .91 11.54 11.54 0 0 0 1.39 4.28 1 1 0 0 1-.24 1.14l-2.28 2.28z"></path></svg>
+            </button>
+          </div>
+
+          <!-- Incoming Call State Actions -->
+          <div id="action-incoming" class="action-group hidden">
+            <button id="btn-decline" class="btn-round btn-round--danger" aria-label="Отклонить">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.68 13.31a16 16 0 0 0 3.41 3.41l2.28-2.28a1 1 0 0 1 1.14-.24 11.54 11.54 0 0 0 4.28 1.39 1 1 0 0 1 .91 1v3.79a1 1 0 0 1-.96 1A20.84 20.84 0 0 1 2 4.04a1 1 0 0 1 1-1h3.79a1 1 0 0 1 1 .91 11.54 11.54 0 0 0 1.39 4.28 1 1 0 0 1-.24 1.14l-2.28 2.28z"></path></svg>
+            </button>
+            <button id="btn-accept" class="btn-round btn-round--success" aria-label="Ответить">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            </button>
+          </div>
+
+        </footer>
+
+        <!-- Signal Logger (collapsed) -->
+        <div id="debug-log-wrapper" class="debug-log-wrapper collapsed">
+          <button id="btn-toggle-log" class="btn-toggle-log">Детали соединения ▾</button>
+          <div id="signal-log" class="signal-log"></div>
+        </div>
+
+      </main>
+
     </div>
 
-    <!-- Модальное окно настроек -->
+    <!-- Onboarding Modal: nickname input -->
+    <div id="onboarding-modal" class="settings-modal hidden">
+      <div class="settings-modal__content">
+        <div class="settings-modal__header">
+          <h3>👋 Добро пожаловать!</h3>
+        </div>
+        <div class="settings-modal__body">
+          <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 12px;">
+            Укажите ваше имя или никнейм. Ваши близкие смогут добавлять вас в друзья по вашему уникальному 6-значному коду.
+          </p>
+          <div class="settings-group">
+            <label for="input-onboard-nickname" class="settings-label">Ваше имя / Никнейм:</label>
+            <input type="text" id="input-onboard-nickname" class="settings-select" placeholder="Например, Алексей или Мама" maxlength="20" style="background: rgba(0, 0, 0, 0.3);" />
+          </div>
+          <span id="onboard-error" class="error-msg hidden" style="color: var(--color-danger); font-size: 0.8rem; margin-top: 5px; display: block;"></span>
+          <button id="btn-save-onboard" class="btn-main" style="margin-top: 15px; padding: 14px; width: 100%;">Создать профиль</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
     <div id="settings-modal" class="settings-modal hidden">
       <div class="settings-modal__content">
         <div class="settings-modal__header">
@@ -174,7 +244,7 @@
         </div>
         <div class="settings-modal__body">
           
-          <!-- Выбор микрофона -->
+          <!-- Microphone selection -->
           <div class="settings-group">
             <label for="select-mic" class="settings-label">Микрофон:</label>
             <select id="select-mic" class="settings-select">
@@ -182,13 +252,13 @@
             </select>
           </div>
 
-          <!-- Регулировка громкости -->
+          <!-- Volume control -->
           <div class="settings-group">
             <label for="range-volume" class="settings-label">Громкость рингтона:</label>
             <input type="range" id="range-volume" class="settings-range" min="0" max="1" step="0.1" value="0.5">
           </div>
 
-          <!-- Тестирование микрофона -->
+          <!-- Mic testing -->
           <div class="settings-group">
             <label class="settings-label">Проверка микрофона:</label>
             <div class="mic-test-container">
@@ -199,8 +269,13 @@
             </div>
           </div>
 
-          <!-- Кнопка сохранения -->
-          <button id="btn-save-settings" class="btn-main btn-main--small" style="margin-top: 15px; padding: 12px; font-size: 0.95rem;">Сохранить</button>
+          <!-- Nickname editing -->
+          <div class="settings-group" style="margin-top: 5px;">
+            <label for="input-edit-nickname" class="settings-label">Изменить имя:</label>
+            <input type="text" id="input-edit-nickname" class="settings-select" placeholder="Новое имя..." maxlength="20" style="background: rgba(0, 0, 0, 0.2);" />
+          </div>
+
+          <button id="btn-save-settings" class="btn-main btn-main--small" style="margin-top: 15px; padding: 12px; font-size: 0.95rem; width: 100%;">Сохранить</button>
         </div>
       </div>
     </div>
