@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Звонилка — Design Guidelines</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --abyss:    #0c0c14;
+    --surface:  #13131e;
+    --raised:   #1c1c2e;
+    --border:   #252538;
+    --violet:   #7c3aed;
+    --violet-l: #9d5cf6;
+    --violet-d: #5b21b6;
+    --emerald:  #10b981;
+    --coral:    #ef4444;
+    --amber:    #f59e0b;
+    --text:     #f0f0f8;
+    --muted:    #6b7280;
+    --dim:      #374151;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--abyss);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 80px 40px 60px;
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 40px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-left { flex: 1; }
+  .hero-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--violet-l);
+    margin-bottom: 16px;
+  }
+  .hero-title {
+    font-size: clamp(42px, 6vw, 72px);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    background: linear-gradient(135deg, #fff 30%, var(--violet-l) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-sub {
+    margin-top: 20px;
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 420px;
+    line-height: 1.7;
+  }
+  .hero-meta {
+    display: flex;
+    gap: 32px;
+    margin-top: 40px;
+  }
+  .hero-stat { }
+  .hero-stat-val {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .hero-stat-lbl {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-top: 2px;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(124,58,237,.15);
+    border: 1px solid rgba(124,58,237,.3);
+    color: var(--violet-l);
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 28px;
+  }
+  .hero-badge::before { content: '●'; font-size: 8px; }
+
+  /* ── SECTION ── */
+  section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 72px 40px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--violet-l);
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .section-desc {
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 560px;
+    margin-bottom: 48px;
+    line-height: 1.7;
+  }
+
+  /* ── COLORS ── */
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+  }
+  .color-card {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .color-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,.4); }
+  .color-swatch {
+    height: 96px;
+    position: relative;
+  }
+  .color-swatch-main { width: 100%; height: 100%; }
+  .color-info {
+    background: var(--raised);
+    padding: 12px 14px;
+  }
+  .color-name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .color-hex {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .color-role { font-size: 10px; color: var(--dim); margin-top: 4px; line-height: 1.4; }
+
+  /* ── TYPOGRAPHY ── */
+  .type-scale { display: flex; flex-direction: column; gap: 0; }
+  .type-row {
+    display: flex;
+    align-items: baseline;
+    gap: 32px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .type-meta {
+    width: 140px;
+    flex-shrink: 0;
+  }
+  .type-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  .type-spec { font-size: 10px; color: var(--dim); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+  .type-sample { flex: 1; }
+
+  /* ── SPACING ── */
+  .spacing-grid { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+  .spacing-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .spacing-bar {
+    background: linear-gradient(135deg, var(--violet), var(--violet-l));
+    border-radius: 4px;
+    width: 40px;
+  }
+  .spacing-val { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+  .spacing-name { font-size: 10px; color: var(--dim); }
+
+  /* ── PHONE MOCKUPS ── */
+  .phones-row {
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+  }
+  .phones-row::-webkit-scrollbar { display: none; }
+  .phone-wrap {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .phone-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+  .phone-state-tag {
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-weight: 500;
+  }
+  .tag-idle    { background: rgba(107,114,128,.15); color: #9ca3af; border: 1px solid rgba(107,114,128,.2); }
+  .tag-calling { background: rgba(245,158,11,.12);  color: var(--amber); border: 1px solid rgba(245,158,11,.2); }
+  .tag-ring    { background: rgba(16,185,129,.12);  color: var(--emerald); border: 1px solid rgba(16,185,129,.2); }
+  .tag-conn    { background: rgba(16,185,129,.15);  color: var(--emerald); border: 1px solid rgba(16,185,129,.3); }
+  .tag-err     { background: rgba(239,68,68,.12);   color: var(--coral); border: 1px solid rgba(239,68,68,.2); }
+
+  .phone {
+    width: 200px;
+    height: 400px;
+    background: var(--surface);
+    border-radius: 36px;
+    border: 1.5px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 6px rgba(255,255,255,.03),
+      0 24px 80px rgba(0,0,0,.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Notch */
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 5px;
+    background: rgba(255,255,255,.12);
+    border-radius: 100px;
+    z-index: 10;
+  }
+
+  /* Status bar */
+  .phone-statusbar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 18px 0;
+    font-size: 10px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  /* Screen area */
+  .phone-screen {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px 24px;
+  }
+
+  .phone-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+
+  .phone-name {
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    margin-top: 8px;
+    letter-spacing: -0.01em;
+  }
+  .phone-status {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  .phone-big-btn {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .phone-big-btn svg { width: 28px; height: 28px; }
+
+  /* Pulse rings */
+  .pulse-ring {
+    position: absolute;
+    border-radius: 50%;
+    animation: pulse-out 2s ease-out infinite;
+    pointer-events: none;
+  }
+  .pulse-ring:nth-child(2) { animation-delay: .5s; }
+  .pulse-ring:nth-child(3) { animation-delay: 1s; }
+  @keyframes pulse-out {
+    0%   { transform: scale(1); opacity: .4; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+
+  .phone-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .phone-sm-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .phone-timer {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: .06em;
+    color: var(--emerald);
+  }
+
+  /* ── BUTTONS ── */
+  .btn-showcase {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  .btn-group { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+  .btn-group-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    transition: transform .15s, opacity .15s, box-shadow .15s;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0) scale(.97); }
+
+  .btn-primary {
+    background: var(--violet);
+    color: #fff;
+    padding: 14px 28px;
+    border-radius: 14px;
+    font-size: 15px;
+    box-shadow: 0 8px 24px rgba(124,58,237,.35);
+  }
+  .btn-primary:hover { box-shadow: 0 12px 32px rgba(124,58,237,.5); }
+
+  .btn-danger {
+    background: var(--coral);
+    color: #fff;
+    padding: 14px 28px;
+    border-radius: 14px;
+    font-size: 15px;
+    box-shadow: 0 8px 24px rgba(239,68,68,.3);
+  }
+  .btn-success {
+    background: var(--emerald);
+    color: #fff;
+    padding: 14px 28px;
+    border-radius: 14px;
+    font-size: 15px;
+    box-shadow: 0 8px 24px rgba(16,185,129,.3);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 14px 28px;
+    border-radius: 14px;
+    font-size: 15px;
+  }
+  .btn-ghost:hover { border-color: var(--dim); color: var(--text); background: var(--raised); }
+
+  .btn-call {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    font-size: 28px;
+    background: var(--violet);
+    color: #fff;
+    box-shadow: 0 0 0 0 rgba(124,58,237,.4);
+  }
+  .btn-call-idle {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    font-size: 34px;
+    background: linear-gradient(135deg, var(--violet-d), var(--violet));
+    color: #fff;
+    box-shadow: 0 16px 48px rgba(124,58,237,.45);
+  }
+  .btn-hangup {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    font-size: 26px;
+    background: var(--coral);
+    color: #fff;
+    box-shadow: 0 12px 32px rgba(239,68,68,.4);
+  }
+  .btn-answer {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    font-size: 26px;
+    background: var(--emerald);
+    color: #fff;
+    box-shadow: 0 12px 32px rgba(16,185,129,.4);
+  }
+  .btn-sm {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+
+  /* ── ICONS SECTION ── */
+  .icon-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .icon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 16px;
+    background: var(--raised);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    min-width: 80px;
+  }
+  .icon-item span { font-size: 28px; }
+  .icon-item small { font-size: 11px; color: var(--muted); text-align: center; }
+
+  /* ── RULES ── */
+  .rules-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .rule-card {
+    background: var(--raised);
+    border-radius: 20px;
+    padding: 28px;
+    border: 1px solid var(--border);
+  }
+  .rule-card.do { border-color: rgba(16,185,129,.2); background: rgba(16,185,129,.04); }
+  .rule-card.dont { border-color: rgba(239,68,68,.2); background: rgba(239,68,68,.04); }
+  .rule-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+  .rule-tag.do   { background: rgba(16,185,129,.15); color: var(--emerald); }
+  .rule-tag.dont { background: rgba(239,68,68,.15); color: var(--coral); }
+  .rule-card ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .rule-card li { font-size: 14px; color: #c4c4d4; line-height: 1.5; padding-left: 16px; position: relative; }
+  .rule-card.do li::before   { content: '✓'; position: absolute; left: 0; color: var(--emerald); font-weight: 700; }
+  .rule-card.dont li::before { content: '✗'; position: absolute; left: 0; color: var(--coral); font-weight: 700; }
+
+  /* ── MOTION ── */
+  .motion-grid { display: flex; flex-direction: column; gap: 16px; }
+  .motion-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 20px 24px;
+    background: var(--raised);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+  }
+  .motion-demo {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--violet);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+  .motion-info { flex: 1; }
+  .motion-name { font-weight: 600; font-size: 14px; }
+  .motion-desc { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .motion-code { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--violet-l); background: rgba(124,58,237,.1); padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
+
+  /* ── ANIMATIONS for demo ── */
+  .demo-pulse { animation: pulse-btn 2s ease-in-out infinite; }
+  @keyframes pulse-btn {
+    0%, 100% { box-shadow: 0 16px 48px rgba(124,58,237,.45); }
+    50% { box-shadow: 0 16px 48px rgba(124,58,237,.8), 0 0 0 12px rgba(124,58,237,.15); }
+  }
+  .demo-ripple-btn {
+    background: var(--violet);
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    animation: ripple-demo 1.5s ease-out infinite;
+  }
+  @keyframes ripple-demo {
+    0%   { box-shadow: 0 0 0 0 rgba(124,58,237,.5); }
+    100% { box-shadow: 0 0 0 20px rgba(124,58,237,.0); }
+  }
+  .demo-fade {
+    animation: fade-blink 2s ease-in-out infinite;
+  }
+  @keyframes fade-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .demo-slide {
+    animation: slide-up-demo 2s ease-in-out infinite;
+  }
+  @keyframes slide-up-demo {
+    0%,100% { transform: translateY(0); opacity:1; }
+    50% { transform: translateY(-6px); opacity:.6; }
+  }
+
+  /* ── GRADIENT BG DETAIL ── */
+  .gradient-detail {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .gradient-card {
+    flex: 1;
+    min-width: 200px;
+    height: 120px;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    padding: 16px;
+  }
+  .gradient-card span {
+    font-size: 12px;
+    color: rgba(255,255,255,.7);
+    background: rgba(0,0,0,.4);
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--dim);
+    font-size: 13px;
+  }
+  .footer strong { color: var(--muted); }
+
+  /* ── NAV ── */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(12,12,20,.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 40px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 52px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-inner::-webkit-scrollbar { display: none; }
+  .nav-link {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+    transition: color .15s, background .15s;
+  }
+  .nav-link:hover { color: var(--text); background: var(--raised); }
+
+  /* SVG phone icons */
+  svg.phone-icon { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#colors" class="nav-link">Цвета</a>
+    <a href="#typography" class="nav-link">Типографика</a>
+    <a href="#spacing" class="nav-link">Отступы</a>
+    <a href="#screens" class="nav-link">Экраны</a>
+    <a href="#buttons" class="nav-link">Кнопки</a>
+    <a href="#icons" class="nav-link">Иконки</a>
+    <a href="#motion" class="nav-link">Анимации</a>
+    <a href="#rules" class="nav-link">Правила</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">Design System v1.0</div>
+    <h1 class="hero-title">Звонилка</h1>
+    <p class="hero-sub">Визуальные правила продукта. Один источник истины для цветов, типографики, компонентов и поведения интерфейса.</p>
+    <div class="hero-meta">
+      <div class="hero-stat">
+        <div class="hero-stat-val">5</div>
+        <div class="hero-stat-lbl">экранов</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">6</div>
+        <div class="hero-stat-lbl">цветов</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">4</div>
+        <div class="hero-stat-lbl">анимации</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">1</div>
+        <div class="hero-stat-lbl">кнопка</div>
+      </div>
+    </div>
+    <div class="hero-badge">Dark Theme Only</div>
+  </div>
+</div>
+
+<!-- COLORS -->
+<section id="colors">
+  <div class="section-label">01 — Цветовая система</div>
+  <h2 class="section-title">Палитра</h2>
+  <p class="section-desc">Все цвета интерфейса. Violet — единственный акцент, остальное — нейтральные тёмные тона и три функциональных цвета состояний.</p>
+
+  <div class="color-grid">
+    <div class="color-card">
+      <div class="color-swatch" style="background:#0c0c14;"></div>
+      <div class="color-info">
+        <div class="color-name">Abyss</div>
+        <div class="color-hex">#0c0c14</div>
+        <div class="color-role">Фон страницы, самый глубокий слой</div>
+      </div>
+    </div>
+    <div class="color-card">
+      <div class="color-swatch" style="background:#13131e; border-top: 1px solid #252538;"></div>
+      <div class="color-info">
+        <div class="color-name">Surface</div>
+        <div class="color-hex">#13131e</div>
+        <div class="color-role">Карточки, контейнеры</div>
+      </div>
+    </div>
+    <div class="color-card">
+      <div class="color-swatch" style="background:#1c1c2e; border-top: 1px solid #252538;"></div>
+      <div class="color-info">
+        <div class="color-name">Raised</div>
+        <div class="color-hex">#1c1c2e</div>
+        <div class="color-role">Поднятые элементы, hover</div>
+      </div>
+    </div>
+    <div class="color-card">
+      <div class="color-swatch" style="background:linear-gradient(135deg, #5b21b6, #7c3aed, #9d5cf6);"></div>
+      <div class="color-info">
+        <div class="color-name">Violet</div>
+        <div class="color-hex">#7c3aed</div>
+        <div class="color-role">Единственный акцент. Главная кнопка, ссылки, активные состояния</div>
+      </div>
+    </div>
+    <div class="color-card">
+      <div class="color-swatch" style="background:#10b981;"></div>
+      <div class="color-info">
+        <div class="color-name">Emerald</div>
+        <div class="color-hex">#10b981</div>
+        <div class="color-role">Connected, «Ответить», онлайн-статус</div>
+      </div>
+    </div>
+    <div class="color-card">
+      <div class="color-swatch" style="background:#ef4444;"></div>
+      <div class="color-info">
+        <div class="color-name">Coral</div>
+        <div class="color-hex">#ef4444</div>
+        <div class="color-role">Сброс, ошибка, «Отклонить»</div>
+      </div>
+    </div>
+    <div class="color-card">
+      <div class="color-swatch" style="background:#f59e0b;"></div>
+      <div class="color-info">
+        <div class="color-name">Amber</div>
+        <div class="color-hex">#f59e0b</div>
+        <div class="color-role">Вызов, ожидание, предупреждение</div>
+      </div>
+    </div>
+    <div class="color-card">
+      <div class="color-swatch" style="background:linear-gradient(180deg, #6b7280 0%, #374151 100%); border-top: 1px solid #252538;"></div>
+      <div class="color-info">
+        <div class="color-name">Slate / Dim</div>
+        <div class="color-hex">#6b7280 / #374151</div>
+        <div class="color-role">Вторичный текст, подписи, иконки</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px;">
+    <div style="font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px;">Градиенты состояний</div>
+    <div class="gradient-detail">
+      <div class="gradient-card" style="background: linear-gradient(135deg, rgba(124,58,237,.08) 0%, rgba(124,58,237,.02) 100%); border: 1px solid rgba(124,58,237,.2);">
+        <span>Violet Glow — Idle</span>
+      </div>
+      <div class="gradient-card" style="background: linear-gradient(135deg, rgba(245,158,11,.1) 0%, rgba(245,158,11,.02) 100%); border: 1px solid rgba(245,158,11,.2);">
+        <span>Amber Glow — Calling</span>
+      </div>
+      <div class="gradient-card" style="background: linear-gradient(135deg, rgba(16,185,129,.1) 0%, rgba(16,185,129,.02) 100%); border: 1px solid rgba(16,185,129,.2);">
+        <span>Emerald Glow — Connected</span>
+      </div>
+      <div class="gradient-card" style="background: linear-gradient(135deg, rgba(239,68,68,.1) 0%, rgba(239,68,68,.02) 100%); border: 1px solid rgba(239,68,68,.2);">
+        <span>Coral Glow — Error</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TYPOGRAPHY -->
+<section id="typography">
+  <div class="section-label">02 — Типографика</div>
+  <h2 class="section-title">Шрифтовая шкала</h2>
+  <p class="section-desc">Системный шрифт — никаких загрузок. На iOS это SF Pro, на Android — Roboto. Mono для таймера и кодов.</p>
+
+  <div class="type-scale">
+    <div class="type-row">
+      <div class="type-meta">
+        <div class="type-label">Display</div>
+        <div class="type-spec">48px / 900 / -0.03em</div>
+      </div>
+      <div class="type-sample" style="font-size: 48px; font-weight: 900; letter-spacing: -0.03em; line-height: 1;">Позвонить маме</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">
+        <div class="type-label">Heading 1</div>
+        <div class="type-spec">28px / 800 / -0.02em</div>
+      </div>
+      <div class="type-sample" style="font-size: 28px; font-weight: 800; letter-spacing: -0.02em;">На связи</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">
+        <div class="type-label">Heading 2</div>
+        <div class="type-spec">20px / 700 / -0.01em</div>
+      </div>
+      <div class="type-sample" style="font-size: 20px; font-weight: 700; letter-spacing: -0.01em;">Входящий звонок</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">
+        <div class="type-label">Body</div>
+        <div class="type-spec">16px / 400 / 0</div>
+      </div>
+      <div class="type-sample" style="font-size: 16px; font-weight: 400; color: #c4c4d4;">Соединяю... Проверьте интернет-подключение.</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">
+        <div class="type-label">Caption</div>
+        <div class="type-spec">12px / 500 / +0.04em</div>
+      </div>
+      <div class="type-sample" style="font-size: 12px; font-weight: 500; letter-spacing: .04em; color: #6b7280; text-transform: uppercase;">Разрешите доступ к микрофону</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">
+        <div class="type-label">Timer / Mono</div>
+        <div class="type-spec">JetBrains Mono · 24px / 400 / +0.06em</div>
+      </div>
+      <div class="type-sample" style="font-family: 'JetBrains Mono', monospace; font-size: 24px; color: var(--emerald); letter-spacing: .06em;">02:47</div>
+    </div>
+  </div>
+</section>
+
+<!-- SPACING -->
+<section id="spacing">
+  <div class="section-label">03 — Отступы и сетка</div>
+  <h2 class="section-title">Система отступов</h2>
+  <p class="section-desc">Базовая единица — 4px. Все отступы кратны ей. На практике используется 8 значений.</p>
+  <div class="spacing-grid">
+    <div class="spacing-item">
+      <div class="spacing-bar" style="height: 4px;"></div>
+      <div class="spacing-val">4px</div>
+      <div class="spacing-name">xs</div>
+    </div>
+    <div class="spacing-item">
+      <div class="spacing-bar" style="height: 8px;"></div>
+      <div class="spacing-val">8px</div>
+      <div class="spacing-name">sm</div>
+    </div>
+    <div class="spacing-item">
+      <div class="spacing-bar" style="height: 12px;"></div>
+      <div class="spacing-val">12px</div>
+      <div class="spacing-name">md</div>
+    </div>
+    <div class="spacing-item">
+      <div class="spacing-bar" style="height: 16px;"></div>
+      <div class="spacing-val">16px</div>
+      <div class="spacing-name">base</div>
+    </div>
+    <div class="spacing-item">
+      <div class="spacing-bar" style="height: 24px;"></div>
+      <div class="spacing-val">24px</div>
+      <div class="spacing-name">lg</div>
+    </div>
+    <div class="spacing-item">
+      <div class="spacing-bar" style="height: 32px;"></div>
+      <div class="spacing-val">32px</div>
+      <div class="spacing-name">xl</div>
+    </div>
+    <div class="spacing-item">
+      <div class="spacing-bar" style="height: 48px;"></div>
+      <div class="spacing-val">48px</div>
+      <div class="spacing-name">2xl</div>
+    </div>
+    <div class="spacing-item">
+      <div class="spacing-bar" style="height: 64px;"></div>
+      <div class="spacing-val">64px</div>
+      <div class="spacing-name">3xl</div>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; display: flex; gap: 16px; flex-wrap: wrap;">
+    <div style="background: var(--raised); border: 1px solid var(--border); border-radius: 16px; padding: 20px 24px; flex: 1; min-width: 200px;">
+      <div style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px;">Border Radius</div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px;">
+        <div style="text-align: center;">
+          <div style="width: 40px; height: 40px; background: var(--violet); border-radius: 8px; margin-bottom: 6px;"></div>
+          <div style="font-size: 10px; color: var(--dim);">8px</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 40px; height: 40px; background: var(--violet); border-radius: 12px; margin-bottom: 6px;"></div>
+          <div style="font-size: 10px; color: var(--dim);">12px</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 40px; height: 40px; background: var(--violet); border-radius: 16px; margin-bottom: 6px;"></div>
+          <div style="font-size: 10px; color: var(--dim);">16px</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 40px; height: 40px; background: var(--violet); border-radius: 20px; margin-bottom: 6px;"></div>
+          <div style="font-size: 10px; color: var(--dim);">20px</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 40px; height: 40px; background: var(--violet); border-radius: 50%; margin-bottom: 6px;"></div>
+          <div style="font-size: 10px; color: var(--dim);">50%</div>
+        </div>
+      </div>
+    </div>
+    <div style="background: var(--raised); border: 1px solid var(--border); border-radius: 16px; padding: 20px 24px; flex: 1; min-width: 200px;">
+      <div style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px;">Кнопки — размеры</div>
+      <div style="display: flex; align-items: center; gap: 16px; margin-top: 16px; flex-wrap: wrap;">
+        <div style="text-align: center;">
+          <div style="width: 44px; height: 44px; background: var(--violet); border-radius: 50%;"></div>
+          <div style="font-size: 10px; color: var(--dim); margin-top: 6px;">44px<br>secondary</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 72px; height: 72px; background: var(--violet); border-radius: 50%;"></div>
+          <div style="font-size: 10px; color: var(--dim); margin-top: 6px;">72px<br>call/end</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 88px; height: 88px; background: linear-gradient(135deg, #5b21b6, #7c3aed); border-radius: 50%;"></div>
+          <div style="font-size: 10px; color: var(--dim); margin-top: 6px;">88px<br>main / idle</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCREENS -->
+<section id="screens">
+  <div class="section-label">04 — Экраны приложения</div>
+  <h2 class="section-title">Состояния интерфейса</h2>
+  <p class="section-desc">Пять экранов — весь продукт. Каждый переключается через <code style="font-family: monospace; font-size: 13px; color: var(--violet-l);">data-state</code> на body.</p>
+
+  <div class="phones-row">
+
+    <!-- IDLE -->
+    <div class="phone-wrap">
+      <div class="phone-label">Idle</div>
+      <div class="phone">
+        <div class="phone-statusbar">
+          <span>9:41</span>
+          <span>●●●</span>
+        </div>
+        <div class="phone-screen">
+          <div style="text-align: center;">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, rgba(124,58,237,.3), rgba(124,58,237,.1)); display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto;">👩</div>
+            <div class="phone-name">Мама</div>
+            <div class="phone-status" style="color: var(--emerald);">● В сети</div>
+          </div>
+          <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+            <div class="pulse-ring" style="width:88px;height:88px;border:1.5px solid rgba(124,58,237,.25);"></div>
+            <div class="pulse-ring" style="width:88px;height:88px;border:1.5px solid rgba(124,58,237,.15);"></div>
+            <button class="btn btn-call-idle demo-pulse" style="font-size: 32px; position:relative; z-index:1;">📞</button>
+          </div>
+          <div style="font-size: 11px; color: var(--muted); text-align: center;">Нажмите, чтобы позвонить</div>
+        </div>
+      </div>
+      <div class="phone-state-tag tag-idle">body[data-state="idle"]</div>
+    </div>
+
+    <!-- CALLING -->
+    <div class="phone-wrap">
+      <div class="phone-label">Calling</div>
+      <div class="phone">
+        <div class="phone-statusbar">
+          <span>9:41</span>
+          <span>●●●</span>
+        </div>
+        <div class="phone-screen">
+          <div style="text-align: center;">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, rgba(245,158,11,.3), rgba(245,158,11,.1)); display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto;">👩</div>
+            <div class="phone-name">Мама</div>
+            <div class="phone-status demo-fade" style="color: var(--amber);">Вызов...</div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+            <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+              <div class="pulse-ring" style="width:72px;height:72px;border:1.5px solid rgba(245,158,11,.3);"></div>
+              <div class="pulse-ring" style="width:72px;height:72px;border:1.5px solid rgba(245,158,11,.15);"></div>
+              <div style="width:72px;height:72px;border-radius:50%;background:rgba(245,158,11,.15);border:1.5px solid rgba(245,158,11,.3);display:flex;align-items:center;justify-content:center;font-size:24px;position:relative;z-index:1;">🔔</div>
+            </div>
+          </div>
+          <div class="phone-actions">
+            <button class="btn btn-hangup" style="font-size: 22px;">📵</button>
+          </div>
+        </div>
+      </div>
+      <div class="phone-state-tag tag-calling">body[data-state="calling"]</div>
+    </div>
+
+    <!-- RINGING / INCOMING -->
+    <div class="phone-wrap">
+      <div class="phone-label">Incoming</div>
+      <div class="phone" style="background: linear-gradient(180deg, #0c0c14 0%, #14102a 100%);">
+        <div class="phone-statusbar">
+          <span>9:41</span>
+          <span>●●●</span>
+        </div>
+        <div class="phone-screen">
+          <div style="text-align: center;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, rgba(124,58,237,.4), rgba(124,58,237,.2)); display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto;border: 2px solid rgba(124,58,237,.4);"></div>
+            <div class="phone-name" style="font-size: 18px; margin-top: 10px;">Мама</div>
+            <div class="phone-status demo-fade" style="color: var(--violet-l);">Входящий звонок</div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <div style="font-size: 32px;" class="demo-slide">📳</div>
+          </div>
+          <div class="phone-actions">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <button class="btn btn-hangup" style="font-size: 22px;">📵</button>
+              <span style="font-size: 9px; color: var(--muted);">Отклонить</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <button class="btn btn-answer" style="font-size: 22px;">📞</button>
+              <span style="font-size: 9px; color: var(--muted);">Ответить</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-state-tag tag-ring">body[data-state="ringing"]</div>
+    </div>
+
+    <!-- CONNECTED -->
+    <div class="phone-wrap">
+      <div class="phone-label">Connected</div>
+      <div class="phone" style="background: linear-gradient(180deg, #0c0c14 0%, #0a1a14 100%);">
+        <div class="phone-statusbar">
+          <span>9:41</span>
+          <span>●●●</span>
+        </div>
+        <div class="phone-screen">
+          <div style="text-align: center;">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, rgba(16,185,129,.3), rgba(16,185,129,.1)); display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto;border: 1.5px solid rgba(16,185,129,.3);">👩</div>
+            <div class="phone-name">Мама</div>
+            <div class="phone-status" style="color: var(--emerald);">● На связи</div>
+          </div>
+          <div class="phone-timer">02:47</div>
+          <div class="phone-actions">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div class="phone-sm-btn" style="background: var(--raised); border: 1px solid var(--border);">🔇</div>
+              <span style="font-size: 9px; color: var(--muted);">Звук</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <button class="btn btn-hangup" style="font-size: 22px; width: 60px; height: 60px;">📵</button>
+              <span style="font-size: 9px; color: var(--muted);">Сбросить</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div class="phone-sm-btn" style="background: var(--raised); border: 1px solid var(--border);">🔊</div>
+              <span style="font-size: 9px; color: var(--muted);">Динамик</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-state-tag tag-conn">body[data-state="connected"]</div>
+    </div>
+
+    <!-- ERROR -->
+    <div class="phone-wrap">
+      <div class="phone-label">Error</div>
+      <div class="phone">
+        <div class="phone-statusbar">
+          <span>9:41</span>
+          <span>●●●</span>
+        </div>
+        <div class="phone-screen">
+          <div style="text-align: center;">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(239,68,68,.12); display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto;border: 1.5px solid rgba(239,68,68,.3);">⚠️</div>
+            <div class="phone-name" style="font-size: 15px; margin-top: 10px;">Нет доступа<br>к микрофону</div>
+            <div class="phone-status" style="color: var(--muted); font-size: 10px; margin-top: 8px;">Разрешите доступ в настройках Safari → Звонилка → Микрофон</div>
+          </div>
+          <div></div>
+          <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+            <button style="background: var(--violet); color: #fff; border: none; border-radius: 12px; padding: 12px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;">Попробовать снова</button>
+            <button style="background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-size: 12px; font-weight: 500; font-family: inherit; cursor: pointer;">Открыть настройки</button>
+          </div>
+        </div>
+      </div>
+      <div class="phone-state-tag tag-err">body[data-state="failed"]</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- BUTTONS -->
+<section id="buttons">
+  <div class="section-label">05 — Компоненты</div>
+  <h2 class="section-title">Кнопки</h2>
+  <p class="section-desc">Круглые кнопки — для звонков. Прямоугольные — только для текстовых действий (ошибки, настройки).</p>
+
+  <div class="btn-showcase">
+    <div class="btn-group">
+      <div class="btn-group-label">Круглые — звонок</div>
+      <div style="display: flex; gap: 16px; align-items: center;">
+        <div style="text-align: center;">
+          <button class="btn btn-call-idle" style="font-size: 34px;">📞</button>
+          <div style="font-size: 10px; color: var(--dim); margin-top: 8px;">Главная<br>88px</div>
+        </div>
+        <div style="text-align: center;">
+          <button class="btn btn-answer" style="font-size: 24px;">📞</button>
+          <div style="font-size: 10px; color: var(--dim); margin-top: 8px;">Ответить<br>72px</div>
+        </div>
+        <div style="text-align: center;">
+          <button class="btn btn-hangup" style="font-size: 24px;">📵</button>
+          <div style="font-size: 10px; color: var(--dim); margin-top: 8px;">Сброс<br>72px</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <div class="btn-group-label">Текстовые</div>
+      <button class="btn btn-primary">Попробовать снова</button>
+      <button class="btn btn-success">Ответить на звонок</button>
+      <button class="btn btn-danger">Завершить</button>
+      <button class="btn btn-ghost">Открыть настройки</button>
+    </div>
+
+    <div class="btn-group">
+      <div class="btn-group-label">Вторичные действия</div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <div style="text-align: center;">
+          <div class="phone-sm-btn" style="background: var(--raised); border: 1px solid var(--border);">🔇</div>
+          <div style="font-size: 10px; color: var(--dim); margin-top: 6px;">Mute<br>44px</div>
+        </div>
+        <div style="text-align: center;">
+          <div class="phone-sm-btn" style="background: var(--raised); border: 1px solid var(--border);">🔊</div>
+          <div style="font-size: 10px; color: var(--dim); margin-top: 6px;">Speaker<br>44px</div>
+        </div>
+        <div style="text-align: center;">
+          <div class="phone-sm-btn" style="background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.3);">🔊</div>
+          <div style="font-size: 10px; color: var(--dim); margin-top: 6px;">Active<br>44px</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; background: var(--raised); border: 1px solid var(--border); border-radius: 20px; padding: 28px;">
+    <div style="font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 20px;">Индикатор качества связи</div>
+    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); padding: 12px 16px; border-radius: 12px;">
+        <div style="width: 10px; height: 10px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 8px var(--emerald);"></div>
+        <span style="font-size: 13px; font-weight: 500;">Отличное</span>
+        <span style="font-size: 11px; color: var(--muted); font-family: monospace;">&lt; 1% loss</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); padding: 12px 16px; border-radius: 12px;">
+        <div style="width: 10px; height: 10px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 8px var(--amber);"></div>
+        <span style="font-size: 13px; font-weight: 500;">Среднее</span>
+        <span style="font-size: 11px; color: var(--muted); font-family: monospace;">1–5% loss</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); padding: 12px 16px; border-radius: 12px;">
+        <div style="width: 10px; height: 10px; border-radius: 50%; background: var(--coral); box-shadow: 0 0 8px var(--coral);"></div>
+        <span style="font-size: 13px; font-weight: 500;">Плохое</span>
+        <span style="font-size: 11px; color: var(--muted); font-family: monospace;">&gt; 5% loss</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ICONS -->
+<section id="icons">
+  <div class="section-label">06 — Иконки</div>
+  <h2 class="section-title">Эмодзи-иконки</h2>
+  <p class="section-desc">Никаких иконочных шрифтов или SVG-спрайтов. Только системные эмодзи — нулевой вес, максимальная универсальность, мама понимает сразу.</p>
+  <div class="icon-grid">
+    <div class="icon-item"><span>📞</span><small>Позвонить / Ответить</small></div>
+    <div class="icon-item"><span>📵</span><small>Сбросить</small></div>
+    <div class="icon-item"><span>🔇</span><small>Mute (выкл)</small></div>
+    <div class="icon-item"><span>🔊</span><small>Динамик (вкл)</small></div>
+    <div class="icon-item"><span>🔕</span><small>Динамик (выкл)</small></div>
+    <div class="icon-item"><span>📳</span><small>Вибрация</small></div>
+    <div class="icon-item"><span>⚠️</span><small>Ошибка</small></div>
+    <div class="icon-item"><span>✅</span><small>Успех</small></div>
+    <div class="icon-item"><span>⏱️</span><small>Таймер</small></div>
+    <div class="icon-item"><span>📡</span><small>Соединение</small></div>
+  </div>
+</section>
+
+<!-- MOTION -->
+<section id="motion">
+  <div class="section-label">07 — Анимации</div>
+  <h2 class="section-title">Движение и переходы</h2>
+  <p class="section-desc">Четыре анимации на весь продукт. Каждая несёт смысловую нагрузку — не декорация.</p>
+
+  <div class="motion-grid">
+    <div class="motion-row">
+      <div class="motion-demo" style="animation: pulse-btn 2s ease-in-out infinite; background: linear-gradient(135deg, #5b21b6, #7c3aed);">📞</div>
+      <div class="motion-info">
+        <div class="motion-name">Pulse Glow — Главная кнопка в Idle</div>
+        <div class="motion-desc">Пульсирующее свечение вокруг кнопки. Сигнализирует «живой, готов к звонку». Работает пока нет активного состояния.</div>
+      </div>
+      <div class="motion-code">2s ease-in-out ∞</div>
+    </div>
+    <div class="motion-row">
+      <div class="motion-demo demo-ripple-btn"></div>
+      <div class="motion-info">
+        <div class="motion-name">Ripple Rings — Состояние Calling</div>
+        <div class="motion-desc">Концентрические кольца расходятся от кнопки. Буквально — как сигнал вызова распространяется к маме.</div>
+      </div>
+      <div class="motion-code">1.5s ease-out ∞ staggered</div>
+    </div>
+    <div class="motion-row">
+      <div class="motion-demo" style="background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.3);">
+        <span style="font-size: 20px; animation: fade-blink 1.5s ease-in-out infinite; display: block;">…</span>
+      </div>
+      <div class="motion-info">
+        <div class="motion-name">Fade Blink — Статус «Соединяю»</div>
+        <div class="motion-desc">Плавное мигание текста статуса. Не мигает резко — именно fade. Показывает ожидание без тревоги.</div>
+      </div>
+      <div class="motion-code">1.5s ease-in-out ∞</div>
+    </div>
+    <div class="motion-row">
+      <div class="motion-demo" style="background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.3); font-family: monospace; font-size: 14px; color: var(--emerald);">
+        <span style="animation: fade-blink 3s ease-in-out infinite;">02:47</span>
+      </div>
+      <div class="motion-info">
+        <div class="motion-name">Screen Transition — Смена состояний</div>
+        <div class="motion-desc">Плавный fade (opacity 0→1) при смене экранов. 250ms — достаточно быстро чтобы не раздражать, достаточно медленно чтобы не пугать маму.</div>
+      </div>
+      <div class="motion-code">250ms ease</div>
+    </div>
+  </div>
+
+  <div style="margin-top: 32px; background: rgba(124,58,237,.08); border: 1px solid rgba(124,58,237,.2); border-radius: 16px; padding: 20px 24px;">
+    <div style="font-size: 13px; font-weight: 600; color: var(--violet-l); margin-bottom: 8px;">prefers-reduced-motion</div>
+    <div style="font-size: 14px; color: var(--muted); line-height: 1.6;">Все анимации выключаются если пользователь включил системную опцию «Уменьшить движение». Обязательно для доступности.</div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9d7be8; margin-top: 12px; background: rgba(0,0,0,.3); padding: 10px 14px; border-radius: 8px;">@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; } }</div>
+  </div>
+</section>
+
+<!-- DO / DONT -->
+<section id="rules">
+  <div class="section-label">08 — Правила дизайна</div>
+  <h2 class="section-title">Делать / Не делать</h2>
+  <p class="section-desc">Конкретные решения, принятые один раз навсегда.</p>
+
+  <div class="rules-grid">
+    <div class="rule-card do">
+      <div class="rule-tag do">✓ Делаем</div>
+      <ul>
+        <li>Одна большая кнопка по центру — мама нажимает, не думая</li>
+        <li>Тёмный фон везде — экран не слепит ночью</li>
+        <li>Цвет кнопки меняется со статусом (фиолет → янтарь → зелёный)</li>
+        <li>Ошибки объясняют что делать, а не что сломалось</li>
+        <li>Эмодзи вместо SVG — ноль веса, максимальная понятность</li>
+        <li>safe-area-inset — кнопки не прячутся под вырезом iPhone</li>
+        <li>100dvh — высота корректная на Safari с адресной строкой</li>
+        <li>Хаптик при входящем — рука чувствует, уши могут не слышать</li>
+      </ul>
+    </div>
+    <div class="rule-card dont">
+      <div class="rule-tag dont">✗ Не делаем</div>
+      <ul>
+        <li>Светлая тема — не нужна, усложняет поддержку</li>
+        <li>Больше одной кнопки на экране — кроме Incoming (там 2)</li>
+        <li>Анимации длиннее 400ms — раздражает при частом использовании</li>
+        <li>Технические ошибки напрямую: «ICE failed», «WebRTC error»</li>
+        <li>Загрузка шрифтов через @import — каждая мс на счету в PWA</li>
+        <li>Gradient text везде — только для заголовков дизайн-доки</li>
+        <li>Notification permissions без контекста — сначала пусть позвонит</li>
+        <li>border-radius: 0 — это не продукт для разработчиков</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top: 24px; background: var(--raised); border: 1px solid var(--border); border-radius: 20px; padding: 28px;">
+    <div style="font-size: 14px; font-weight: 700; margin-bottom: 16px;">Тест «Правило мамы»</div>
+    <div style="font-size: 14px; color: var(--muted); line-height: 1.8;">
+      Перед любым дизайн-решением — один вопрос: <span style="color: var(--text); font-weight: 500;">«Мама разберётся за 3 секунды?»</span><br>
+      Если нет — убираем, упрощаем или объясняем. Аудитория — не молодой разработчик, а человек, которому нужно просто позвонить сыну.
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  <div><strong>Звонилка</strong> · Design System v1.0</div>
+  <div>Июнь 2026</div>
+</div>
+
+</body>
+</html>

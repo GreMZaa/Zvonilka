@@ -60,6 +60,7 @@ let actionIdleEl = null;
 let actionActiveEl = null;
 let actionIncomingEl = null;
 let btnMuteEl = null;
+let btnSpeakerEl = null;
 let historySectionEl = null;
 let historyListEl = null;
 
@@ -136,6 +137,7 @@ export function initUI() {
   actionIncomingEl = document.getElementById('action-incoming');
   
   btnMuteEl = document.getElementById('btn-mute');
+  btnSpeakerEl = document.getElementById('btn-speaker');
   historySectionEl = document.getElementById('history-section');
   historyListEl = document.getElementById('history-list');
 
@@ -204,6 +206,7 @@ export function initUI() {
   safeBind('btn-toggle-log', 'click', _handleToggleLogClick);
   
   if (btnMuteEl) safeBind(btnMuteEl, 'click', _handleMuteClick);
+  if (btnSpeakerEl) safeBind(btnSpeakerEl, 'click', _handleSpeakerClick);
   safeBind('btn-toggle-history', 'click', _handleToggleHistoryClick);
 
   // Обработчики настроек
@@ -297,6 +300,19 @@ function _transitionToState(state) {
   }
   _stopVibration();
   _stopTimer();
+  
+  // Устанавливаем data-state на body для переключения стилей
+  let dataState = 'idle';
+  switch (state) {
+    case 'connecting': dataState = 'calling'; break;
+    case 'connected': dataState = 'connected'; break;
+    case 'incoming': dataState = 'ringing'; break;
+    case 'failed':
+    case 'timeout':
+    case 'permission-denied': dataState = 'failed'; break;
+    default: dataState = 'idle';
+  }
+  document.body.setAttribute('data-state', dataState);
   
   // Останавливаем все фоновые циклы звуков
   stopRingtone();
@@ -680,10 +696,26 @@ function _handleMuteClick() {
   const isMuted = toggleMute();
   if (isMuted) {
     btnMuteEl.classList.add('muted');
+    btnMuteEl.textContent = '🎙️';
     _addSignalLog('🔇 Ваш микрофон отключен');
   } else {
     btnMuteEl.classList.remove('muted');
+    btnMuteEl.textContent = '🔇';
     _addSignalLog('🎤 Ваш микрофон включен');
+  }
+}
+
+let isSpeakerActive = false;
+function _handleSpeakerClick() {
+  isSpeakerActive = !isSpeakerActive;
+  if (isSpeakerActive) {
+    btnSpeakerEl.classList.add('active');
+    btnSpeakerEl.textContent = '🔊';
+    _addSignalLog('🔊 Громкая связь включена');
+  } else {
+    btnSpeakerEl.classList.remove('active');
+    btnSpeakerEl.textContent = '🔕';
+    _addSignalLog('🔕 Громкая связь выключена');
   }
 }
 
