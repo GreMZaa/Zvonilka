@@ -174,7 +174,7 @@ export async function joinRoom(roomId) {
 
   isConnected = true;
 
-  // Безопасный запрос существующего offer из БД для устранения состояния гонки
+  // Безопасный запрос существующих сигналов (offer и ice-candidates) из БД для устранения состояния гонки
   setTimeout(async () => {
     try {
       if (currentRoomId !== roomId || currentRole !== 'callee') return;
@@ -182,27 +182,41 @@ export async function joinRoom(roomId) {
         .from(SIGNALING_TABLE)
         .select('type, payload, sender')
         .eq('room_id', roomId)
-        .eq('type', 'offer')
-        .limit(1);
+        .eq('sender', 'caller');
 
       if (!error && data && data.length > 0) {
-        const record = data[0];
-        log('Signaling', `📥 Извлечен существующий ${record.type} из БД для комнаты ${roomId}`);
-        const signal = {
-          type: record.type,
-          payload: record.payload,
-          sender: record.sender,
-        };
-        for (const listener of signalListeners) {
-          try {
-            listener(signal);
-          } catch (e) {
-            log('Signaling', `❌ Ошибка слушателя при предзагрузке: ${e.message}`);
+        log('Signaling', `📥 Извлечено ${data.length} существующих сигналов из БД для комнаты ${roomId}`);
+        
+        const notify = (record) => {
+          const signal = {
+            type: record.type,
+            payload: record.payload,
+            sender: record.sender,
+          };
+          for (const listener of signalListeners) {
+            try {
+              listener(signal);
+            } catch (e) {
+              log('Signaling', `❌ Ошибка слушателя при предзагрузке: ${e.message}`);
+            }
           }
+        };
+
+        // Сначала обрабатываем offer
+        const offerRecord = data.find(r => r.type === 'offer');
+        if (offerRecord) {
+          notify(offerRecord);
         }
+
+        // Затем обрабатываем все остальные сигналы
+        data.forEach(record => {
+          if (record.type !== 'offer') {
+            notify(record);
+          }
+        });
       }
     } catch (err) {
-      log('Signaling', `⚠️ Не удалось предзагрузить offer из БД: ${err.message}`);
+      log('Signaling', `⚠️ Не удалось предзагрузить сигналы из БД: ${err.message}`);
     }
   }, 400);
 }

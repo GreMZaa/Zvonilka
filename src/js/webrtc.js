@@ -30,6 +30,9 @@ let pendingOffer = null;
 /** @type {HTMLAudioElement | null} */
 let remoteAudioElement = null;
 
+/** @type {Array<object>} Очередь удаленных ICE-кандидатов до установки Remote Description */
+let pendingRemoteCandidates = [];
+
 /** @type {number | null} */
 let connectionTimeoutTimer = null;
 
@@ -214,38 +217,33 @@ function _createPeerConnection(stream) {
     
     if (!remoteAudioElement) {
       remoteAudioElement = document.getElementById('remote-audio');
-      if (!remoteAudioElement) {
-        remoteAudioElement = document.createElement('audio');
-        remoteAudioElement.id = 'remote-audio';
-        remoteAudioElement.setAttribute('autoplay', '');
-        remoteAudioElement.setAttribute('playsinline', '');
-        remoteAudioElement.setAttribute('webkit-playsinline', '');
-        remoteAudioElement.style.display = 'none';
-        document.body.appendChild(remoteAudioElement);
-      }
     }
     
-    remoteAudioElement.srcObject = remoteStream;
-    
-    // Запуск воспроизведения с защитой от ограничений автоплея
-    remoteAudioElement.play()
-      .then(() => log('WebRTC', '🔊 Воспроизведение удалённого звука запущено.'))
-      .catch(err => {
-        log('WebRTC', `⚠️ Ошибка автовоспроизведения звука: ${err.message}. Будет запущен при клике.`);
-        
-        // Резервный запуск при клике на экран
-        const playOnDocClick = () => {
-          if (remoteAudioElement) {
-            remoteAudioElement.play()
-              .then(() => {
-                log('WebRTC', '🔊 Звук запущен по взаимодействию пользователя.');
-                document.removeEventListener('click', playOnDocClick);
-              })
-              .catch(e => log('WebRTC', `⚠️ Резервный запуск не удался: ${e.message}`));
-          }
-        };
-        document.addEventListener('click', playOnDocClick);
-      });
+    if (remoteAudioElement) {
+      remoteAudioElement.srcObject = remoteStream;
+      
+      // Запуск воспроизведения с защитой от ограничений автоплея
+      remoteAudioElement.play()
+        .then(() => log('WebRTC', '🔊 Воспроизведение удалённого звука запущено.'))
+        .catch(err => {
+          log('WebRTC', `⚠️ Ошибка автовоспроизведения звука: ${err.message}. Будет запущен при клике.`);
+          
+          // Резервный запуск при клике на экран
+          const playOnDocClick = () => {
+            if (remoteAudioElement) {
+              remoteAudioElement.play()
+                .then(() => {
+                  log('WebRTC', '🔊 Звук запущен по взаимодействию пользователя.');
+                  document.removeEventListener('click', playOnDocClick);
+                })
+                .catch(e => log('WebRTC', `⚠️ Резервный запуск не удался: ${e.message}`));
+            }
+          };
+          document.addEventListener('click', playOnDocClick);
+        });
+    } else {
+      log('WebRTC', '❌ Ошибка: Элемент #remote-audio не найден на странице.');
+    }
   };
 
   // Мониторинг изменения состояния подключения
@@ -584,6 +582,9 @@ export async function acceptIncomingCall(offerPayload = null) {
     await peerConnection.setRemoteDescription(sessionDescription);
     log('WebRTC', '✅ Установлен Remote Description (Offer).');
 
+    // Обрабатываем отложенные удаленные ICE-кандидаты
+    await _processPendingCandidates();
+
     // Создание ответа (Answer)
     log('WebRTC', 'Создание SDP Answer...');
     const answer = await peerConnection.createAnswer();
@@ -643,6 +644,9 @@ function _subscribeToSignalingEvents() {
         });
         await peerConnection.setRemoteDescription(sessionDescription);
         log('WebRTC', '✅ Установлен Remote Description (Answer).');
+
+        // Обрабатываем отложенные удаленные ICE-кандидаты
+        await _processPendingCandidates();
       } 
       else if (signal.type === 'ice-candidate') {
         // Получили ICE-кандидат
@@ -650,7 +654,8 @@ function _subscribeToSignalingEvents() {
           log('WebRTC', '📥 Получен и добавлен удаленный ICE-кандидат.');
           await peerConnection.addIceCandidate(new RTCIceCandidate(signal.payload));
         } else {
-          log('WebRTC', '⚠️ Получен ICE-кандидат, но Remote Description еще не установлен. Пропускаем.');
+          log('WebRTC', '📥 Получен удаленный ICE-кандидат, откладываем до установки Remote Description.');
+          pendingRemoteCandidates.push(signal.payload);
         }
       }
       else if (signal.type === 'fallback-audio') {
@@ -684,6 +689,7 @@ export async function hangUp(sendHangupSignal = true) {
   _stopQualityMonitoring(); // Останавливаем мониторинг качества
   _stopFallbackAudio(); // Останавливаем резервное аудиовещание
   pendingOffer = null;
+  pendingRemoteCandidates = [];
   forceRelay = false; // Сбрасываем принудительный TURN для будущих звонков
 
   // 1. Отправить сигнал hangup удаленному пиру, если требуется
@@ -792,24 +798,50 @@ export function toggleMute() {
 
 /**
  * Разблокирует воспроизведение аудио в Safari на iOS.
- * Проигрывает пустой немой звук в ответ на пользовательский жест.
+ * Проигрывает пустой немой звук на статическом элементе remote-audio, чтобы разблокировать его.
  */
 export function unlockAudioContext() {
-  const audio = document.createElement('audio');
-  audio.setAttribute('playsinline', '');
-  audio.setAttribute('webkit-playsinline', '');
-  audio.style.display = 'none';
+  let audio = document.getElementById('remote-audio');
+  if (!audio) {
+    audio = document.createElement('audio');
+    audio.id = 'remote-audio';
+    audio.setAttribute('autoplay', '');
+    audio.setAttribute('playsinline', '');
+    audio.setAttribute('webkit-playsinline', '');
+    audio.style.display = 'none';
+    document.body.appendChild(audio);
+  }
+  
+  // Задаем пустой беззвучный WAV
   audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
   
-  document.body.appendChild(audio);
   audio.play()
     .then(() => {
-      log('WebRTC', '🔊 Аудио-контекст iOS/Safari успешно разблокирован.');
-      audio.remove();
+      log('WebRTC', '🔊 Аудио-элемент remote-audio успешно разблокирован для iOS/Safari.');
     })
     .catch(err => {
-      log('WebRTC', `⚠️ Не удалось разблокировать аудио-контекст: ${err.message}`);
-      audio.remove();
+      log('WebRTC', `⚠️ Не удалось разблокировать remote-audio: ${err.message}`);
     });
+}
+
+/**
+ * Добавляет все отложенные удаленные ICE-кандидаты в PeerConnection.
+ * Вызывается после успешной установки удаленного описания (Remote Description).
+ * @private
+ */
+async function _processPendingCandidates() {
+  if (!peerConnection || !peerConnection.remoteDescription) return;
+  if (pendingRemoteCandidates.length === 0) return;
+
+  log('WebRTC', `⚙️ Обработка отложенных удаленных ICE-кандидатов (${pendingRemoteCandidates.length} шт.)...`);
+  for (const candidate of pendingRemoteCandidates) {
+    try {
+      await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      log('WebRTC', '  ↳ Отложенный ICE-кандидат успешно добавлен.');
+    } catch (err) {
+      log('WebRTC', `❌ Ошибка добавления отложенного ICE-кандидата: ${err.message}`);
+    }
+  }
+  pendingRemoteCandidates = [];
 }
 
