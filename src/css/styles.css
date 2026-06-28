@@ -503,6 +503,12 @@ body[data-state="failed"] {
   background: var(--raised);
 }
 
+.btn-sm {
+  padding: 8px 16px;
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+}
+
 /* Круглые кнопки из гайдлайна */
 .btn-call-idle {
   width: 88px;

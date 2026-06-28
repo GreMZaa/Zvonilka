@@ -53,9 +53,7 @@
               <span id="my-code-container" class="my-code-container">Код: <strong id="my-code">------</strong> <button id="btn-copy-my-code" class="btn-copy-code" title="Копировать код">📋</button></span>
             </div>
           </div>
-          <button id="btn-settings" class="btn-settings-toggle" aria-label="Открыть настройки">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          </button>
+          <button id="btn-settings" class="btn-settings-toggle" aria-label="Открыть настройки">⚙️</button>
         </div>
 
         <!-- Add Friend Form -->
@@ -210,15 +208,15 @@
           <h3>👋 Добро пожаловать!</h3>
         </div>
         <div class="settings-modal__body">
-          <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 12px;">
+          <p style="font-size: 0.82rem; color: var(--muted); line-height: 1.4; margin-bottom: 12px;">
             Укажите ваше имя или никнейм. Ваши близкие смогут добавлять вас в друзья по вашему уникальному 6-значному коду.
           </p>
           <div class="settings-group">
             <label for="input-onboard-nickname" class="settings-label">Ваше имя / Никнейм:</label>
-            <input type="text" id="input-onboard-nickname" class="settings-select" placeholder="Например, Алексей или Мама" maxlength="20" style="background: rgba(0, 0, 0, 0.3);" />
+            <input type="text" id="input-onboard-nickname" class="settings-select" placeholder="Например, Алексей или Мама" maxlength="20" />
           </div>
-          <span id="onboard-error" class="error-msg hidden" style="color: var(--color-danger); font-size: 0.8rem; margin-top: 5px; display: block;"></span>
-          <button id="btn-save-onboard" class="btn-main" style="margin-top: 15px; padding: 14px; width: 100%;">Создать профиль</button>
+          <span id="onboard-error" class="error-msg hidden" style="color: var(--coral); font-size: 0.8rem; margin-top: 5px; display: block;"></span>
+          <button id="btn-save-onboard" class="btn btn-primary" style="margin-top: 16px; width: 100%;">Создать профиль</button>
         </div>
       </div>
     </div>
@@ -228,7 +226,7 @@
       <div class="settings-modal__content">
         <div class="settings-modal__header">
           <h3>⚙️ Настройки</h3>
-          <button id="btn-close-settings" class="btn-close-settings">&times;</button>
+          <button id="btn-close-settings" class="btn-close-settings" aria-label="Закрыть">×</button>
         </div>
         <div class="settings-modal__body">
           
@@ -250,7 +248,7 @@
           <div class="settings-group">
             <label class="settings-label">Проверка микрофона:</label>
             <div class="mic-test-container">
-              <button id="btn-test-mic" class="btn-action btn-action--secondary btn-action--small">Проверить</button>
+              <button id="btn-test-mic" class="btn btn-ghost btn-sm">Проверить</button>
               <div class="mic-meter">
                 <div id="mic-meter-bar" class="mic-meter-bar"></div>
               </div>
@@ -258,12 +256,12 @@
           </div>
 
           <!-- Nickname editing -->
-          <div class="settings-group" style="margin-top: 5px;">
+          <div class="settings-group">
             <label for="input-edit-nickname" class="settings-label">Изменить имя:</label>
-            <input type="text" id="input-edit-nickname" class="settings-select" placeholder="Новое имя..." maxlength="20" style="background: rgba(0, 0, 0, 0.2);" />
+            <input type="text" id="input-edit-nickname" class="settings-select" placeholder="Новое имя..." maxlength="20" />
           </div>
 
-          <button id="btn-save-settings" class="btn-main btn-main--small" style="margin-top: 15px; padding: 12px; font-size: 0.95rem; width: 100%;">Сохранить</button>
+          <button id="btn-save-settings" class="btn btn-primary" style="margin-top: 16px; width: 100%;">Сохранить</button>
         </div>
       </div>
     </div>
