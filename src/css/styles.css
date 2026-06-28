@@ -478,9 +478,6 @@ body {
 
 /* === 10. Дебаг-Лог / Подробности соединения === */
 .debug-log-wrapper {
-  position: absolute;
-  bottom: 0;
-  left: 0;
   width: 100%;
   background: rgba(6, 9, 19, 0.95);
   border-top: 1px solid var(--panel-border);
@@ -488,17 +485,14 @@ body {
   flex-direction: column;
   z-index: 100;
   transition: var(--transition-smooth);
-}
-
-.debug-log-wrapper.collapsed {
-  transform: translateY(100%);
-  bottom: 36px; /* Оставляем видна кнопку управления */
+  flex-shrink: 0;
 }
 
 .debug-log-wrapper.collapsed .signal-log {
   max-height: 0;
   padding: 0;
   border: none;
+  overflow: hidden;
 }
 
 .btn-toggle-log {
@@ -1441,6 +1435,7 @@ body {
   align-items: center;
   border-top: 1px solid rgba(255, 255, 255, 0.02);
   background: rgba(10, 15, 30, 0.2);
+  flex-shrink: 0;
 }
 
 /* === Адаптивный дизайн (Mobile Responsive) === */
