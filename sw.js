@@ -6,7 +6,7 @@
  * Запросы к Supabase и другим сторонним доменам всегда идут по сети.
  */
 
-const CACHE_NAME = 'zvonilka-v2.2';
+const CACHE_NAME = 'zvonilka-v3.0';
 const STATIC_ASSETS = [
   './',
   './index.html',

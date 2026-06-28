@@ -1241,11 +1241,15 @@ async function _updateFriendsList() {
       }
 
       // 2. Рендерим в вертикальный список всех друзей
+      const firstLetter = friend.nickname ? friend.nickname.charAt(0).toUpperCase() : '👤';
       const friendItem = document.createElement('div');
       friendItem.className = 'friend-item';
       friendItem.innerHTML = `
         <div class="friend-info">
-          <div class="presence-dot ${presenceClass}" title="${presenceText}"></div>
+          <div class="friend-avatar-wrap">
+            <span class="friend-avatar">${firstLetter}</span>
+            <div class="presence-dot ${presenceClass}" title="${presenceText}"></div>
+          </div>
           <span class="friend-name">${friend.nickname}</span>
         </div>
         <div class="friend-actions">
