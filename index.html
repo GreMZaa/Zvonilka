@@ -2,30 +2,16 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="description" content="Звонилка — бесплатные голосовые звонки через WebRTC, устойчивые к блокировкам.">
-  <meta name="theme-color" content="#090E17">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Звонилка</title>
   
-  <!-- Apple Web App Meta -->
+  <!-- Manifest & PWA Meta -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0c0c14">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Звонилка">
-
-  <title>Звонилка</title>
-
-  <!-- PWA Manifest -->
-  <link rel="manifest" href="manifest.json">
-
-  <!-- Иконки -->
-  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
-  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
-
-  <!-- Шрифты: Plus Jakarta Sans (для заголовков) и Space Grotesk (для интерфейса) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- Стили -->
+  
+  <!-- CSS Styles -->
   <link rel="stylesheet" href="src/css/styles.css">
   <link rel="stylesheet" href="src/css/animations.css">
 </head>
@@ -39,166 +25,216 @@
 
   <div id="app" class="app-container state-idle">
     
-    <!-- Split Pane Layout -->
-    <div class="split-pane">
-      
-      <!-- Left Panel: Profile and Friends -->
-      <aside class="app-sidebar" id="app-sidebar">
-        <!-- Sidebar Header: Profile info -->
-        <div class="sidebar-header">
-          <div class="profile-summary">
-            <span class="avatar-stub">👤</span>
-            <div class="profile-details">
-              <span id="my-nickname" class="my-nickname">Профиль</span>
-              <span id="my-code-container" class="my-code-container">Код: <strong id="my-code">------</strong> <button id="btn-copy-my-code" class="btn-copy-code" title="Копировать код">📋</button></span>
+    <!-- Screen 1: Chats (default) -->
+    <div id="screen-chats" class="app-screen">
+      <!-- Screen Header: Profile info -->
+      <header class="screen-header">
+        <div class="profile-summary">
+          <span class="avatar-stub">👤</span>
+          <div class="profile-details">
+            <span id="my-nickname" class="my-nickname">Профиль</span>
+            <span id="my-code-container" class="my-code-container">Код: <strong id="my-code">------</strong> <button id="btn-copy-my-code" class="btn-copy-code" title="Копировать код">📋</button></span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Add Friend Form -->
+      <div class="add-friend-section">
+        <span class="section-title">Добавить друга</span>
+        <div class="add-friend-control">
+          <input type="text" id="input-friend-code" placeholder="Введи 6-значный код..." maxlength="6" inputmode="numeric" pattern="[0-9]*" />
+          <button id="btn-add-friend" class="btn btn-primary btn-add-friend-action" title="Добавить">+</button>
+        </div>
+        <span id="add-friend-error" class="error-msg hidden"></span>
+      </div>
+
+      <!-- Online Friends Ribbon (Horizontal) -->
+      <div class="online-ribbon-container">
+        <span class="section-title">В сети</span>
+        <div id="online-ribbon" class="online-ribbon">
+          <!-- "Quick Room Join" Button -->
+          <div class="ribbon-item ribbon-item--action" id="btn-quick-room">
+            <div class="ribbon-avatar-wrap">
+              <span class="ribbon-avatar">🔑</span>
             </div>
+            <span class="ribbon-name">Войти по коду</span>
           </div>
-          <button id="btn-settings" class="btn-settings-toggle" aria-label="Открыть настройки">⚙️</button>
+          <!-- dynamic online items -->
         </div>
+      </div>
 
-        <!-- Add Friend Form -->
-        <div class="add-friend-section">
-          <span class="section-title">Добавить друга</span>
-          <div class="add-friend-control">
-            <input type="text" id="input-friend-code" placeholder="Введи 6-значный код..." maxlength="6" inputmode="numeric" pattern="[0-9]*" />
-            <button id="btn-add-friend" class="btn-add-friend" title="Добавить">+</button>
-          </div>
-          <span id="add-friend-error" class="error-msg hidden"></span>
+      <!-- Friends List scroll area -->
+      <div class="friends-list-container">
+        <span class="section-title">Все друзья</span>
+        <div id="friends-list" class="friends-list">
+          <div class="friends-empty">Список друзей пуст. Добавьте друга по его коду выше!</div>
         </div>
-
-        <!-- Friends List scroll area -->
-        <div class="friends-list-container">
-          <span class="section-title">Друзья</span>
-          <div id="friends-list" class="friends-list">
-            <div class="friends-empty">Список друзей пуст. Добавьте друга по его коду выше!</div>
+      </div>
+      
+      <!-- Manual Room Code Join Dialog -->
+      <div id="manual-join-modal" class="settings-modal hidden">
+        <div class="settings-modal__content">
+          <div class="settings-modal__header">
+            <h3>🔑 Вход по коду комнаты</h3>
+            <button id="btn-close-manual-join" class="btn-close-settings">&times;</button>
           </div>
-        </div>
-        
-        <!-- Manual Room Code Join (Collapsible) -->
-        <div class="manual-join-section">
-          <button id="btn-toggle-manual-join" class="btn-manual-toggle">Вход по коду комнаты ▾</button>
-          <div id="manual-join-form" class="manual-join-form hidden">
-            <div class="join-control">
+          <div class="settings-modal__body">
+            <div class="settings-group">
+              <label for="input-room" class="settings-label">Код комнаты (8 цифр/букв):</label>
               <input
                 id="input-room"
                 type="text"
-                class="input-room"
+                class="settings-select"
                 placeholder="Введи 8-значный код..."
                 maxlength="8"
                 autocomplete="off"
                 pattern="[a-zA-Z0-9]*"
                 inputmode="text"
               />
-              <button id="btn-join" class="btn-action btn-action--secondary" aria-label="Присоединиться">
-                Войти
-              </button>
+            </div>
+            <button id="btn-join" class="btn btn-primary" style="margin-top: 16px; width: 100%;">Войти</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 2: Call History -->
+    <div id="screen-history" class="app-screen hidden">
+      <header class="screen-header">
+        <h2 class="screen-title-text">⏳ История звонков</h2>
+      </header>
+      <div class="history-list-container">
+        <div id="history-list" class="history-list">
+          <div class="history-empty">История вызовов пуста</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 3: Settings -->
+    <div id="screen-settings" class="app-screen hidden">
+      <header class="screen-header">
+        <h2 class="screen-title-text">⚙️ Настройки</h2>
+      </header>
+      <div class="settings-list-container">
+        <!-- Microphone selection -->
+        <div class="settings-group">
+          <label for="select-mic" class="settings-label">Микрофон:</label>
+          <select id="select-mic" class="settings-select">
+            <option value="">По умолчанию</option>
+          </select>
+        </div>
+
+        <!-- Volume control -->
+        <div class="settings-group">
+          <label for="range-volume" class="settings-label">Громкость рингтона:</label>
+          <input type="range" id="range-volume" class="settings-range" min="0" max="1" step="0.1" value="0.5">
+        </div>
+
+        <!-- Mic testing -->
+        <div class="settings-group">
+          <label class="settings-label">Проверка микрофона:</label>
+          <div class="mic-test-container">
+            <button id="btn-test-mic" class="btn btn-ghost btn-sm">Проверить</button>
+            <div class="mic-meter">
+              <div id="mic-meter-bar" class="mic-meter-bar"></div>
             </div>
           </div>
         </div>
-      </aside>
-      
-      <!-- Right Panel: Active Call workspace and History -->
-      <main class="app-workspace" id="app-workspace">
+
+        <!-- Nickname editing -->
+        <div class="settings-group">
+          <label for="input-edit-nickname" class="settings-label">Изменить имя:</label>
+          <input type="text" id="input-edit-nickname" class="settings-select" placeholder="Новое имя..." maxlength="20" />
+        </div>
+
+        <button id="btn-save-settings" class="btn btn-primary" style="margin-top: 24px; width: 100%;">Сохранить</button>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation Tabbar -->
+    <nav class="app-tabbar">
+      <button id="tab-chats" class="tab-item active" aria-label="Чаты">
+        <span class="tab-icon">💬</span>
+        <span class="tab-label">Чаты</span>
+      </button>
+      <button id="tab-history" class="tab-item" aria-label="История">
+        <span class="tab-icon">🕒</span>
+        <span class="tab-label">История</span>
+      </button>
+      <button id="tab-settings" class="tab-item" aria-label="Настройки">
+        <span class="tab-icon">⚙️</span>
+        <span class="tab-label">Настройки</span>
+      </button>
+    </nav>
+
+    <!-- Screen 4: Call Screen (overlaps everything during call states) -->
+    <div id="screen-call" class="screen-call hidden">
+      <!-- Call Screen Header -->
+      <header class="call-header">
+        <div id="call-meta" class="call-meta">
+          <span id="peer-status" class="peer-status">● Не в сети</span>
+          <span id="conn-quality" class="conn-quality">📶 Ожидание</span>
+        </div>
+        <div id="room-badge" class="room-badge hidden">
+          <code id="room-code" class="room-badge__code">------</code>
+          <button id="btn-copy" class="room-badge__copy" aria-label="Копировать код">📋</button>
+        </div>
+      </header>
+
+      <!-- Call Screen Main Body -->
+      <div class="call-body">
+        <h2 id="call-status" class="status-text">Готов к звонку</h2>
+        <div id="call-timer" class="timer-text hidden">00:00</div>
+
+        <!-- Avatar Pulsing Circles -->
+        <div class="call-avatar-container">
+          <div class="pulse-ring"></div>
+          <div class="pulse-ring"></div>
+          <div class="pulse-ring"></div>
+          <div class="call-avatar" id="active-call-avatar">👩</div>
+        </div>
+      </div>
+
+      <!-- Call Screen Footer Controls -->
+      <footer class="call-footer">
         
-        <!-- Workspace Header (Visible on active call or mobile) -->
-        <header class="workspace-header">
-          <button id="btn-back-to-sidebar" class="btn-back-to-sidebar hidden">⬅️</button>
-          
-          <div class="workspace-title-container">
-            <span id="workspace-title" class="workspace-title">Звонилка</span>
-            <div id="call-meta" class="call-meta hidden">
-              <span id="peer-status" class="peer-status">● Не в сети</span>
-              <span id="conn-quality" class="conn-quality">📶 Ожидание</span>
-            </div>
+        <!-- Idle State Action -->
+        <div id="action-idle" class="action-group hidden" style="flex-direction: column; gap: var(--space-sm);">
+          <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+            <div class="pulse-ring"></div>
+            <div class="pulse-ring"></div>
+            <div class="pulse-ring"></div>
+            <button id="btn-call" class="btn-call-idle pulse-btn">📞</button>
           </div>
-
-          <div id="room-badge" class="room-badge hidden">
-            <span class="room-badge__label">Код:</span>
-            <code id="room-code" class="room-badge__code">------</code>
-            <button id="btn-copy" class="room-badge__copy" aria-label="Копировать код">📋</button>
-          </div>
-        </header>
-
-        <!-- Workspace content: scrollable area -->
-        <div class="workspace-content" id="workspace-content">
-          
-          <!-- Idle / Default State: History -->
-          <div id="workspace-idle-state" class="workspace-idle-state">
-            <div class="idle-placeholder">
-              <span class="placeholder-icon">✨</span>
-              <p>Выберите друга для звонка или добавьте нового по коду.</p>
-            </div>
-            
-            <!-- Call History section -->
-            <div class="history-section">
-              <span class="section-title">⏳ История звонков</span>
-              <div id="history-list" class="history-list">
-                <!-- dynamic entries -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Active Call view -->
-          <div id="workspace-active-state" class="workspace-active-state hidden">
-            <div class="status-container">
-              <h2 id="call-status" class="status-text">Готов к звонку</h2>
-              <div id="call-timer" class="timer-text hidden">00:00</div>
-            </div>
-
-            <!-- Avatar Container -->
-            <div class="call-avatar-container">
-              <div class="pulse-ring"></div>
-              <div class="pulse-ring"></div>
-              <div class="pulse-ring"></div>
-              <div class="call-avatar" id="active-call-avatar">👩</div>
-            </div>
-          </div>
-
+          <span style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Нажмите для вызова</span>
         </div>
 
-        <!-- Footer Call Controls -->
-        <footer class="workspace-footer">
-          
-          <!-- Idle State Action -->
-          <div id="action-idle" class="action-group hidden" style="flex-direction: column; gap: var(--space-sm);">
-            <div style="position: relative; display: flex; align-items: center; justify-content: center;">
-              <div class="pulse-ring"></div>
-              <div class="pulse-ring"></div>
-              <div class="pulse-ring"></div>
-              <button id="btn-call" class="btn-call-idle pulse-btn">📞</button>
-            </div>
-            <span style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Нажмите для вызова</span>
-          </div>
-
-          <!-- Calling / Connected State Actions -->
-          <div id="action-active" class="action-group hidden">
-            <button id="btn-mute" class="phone-sm-btn" aria-label="Выключить микрофон">🔇</button>
-            <button id="btn-hangup" class="btn-hangup" aria-label="Сбросить звонок">📵</button>
-            <button id="btn-speaker" class="phone-sm-btn" aria-label="Громкая связь">🔊</button>
-          </div>
-
-          <!-- Incoming Call State Actions -->
-          <div id="action-incoming" class="action-group hidden">
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
-              <button id="btn-decline" class="btn-hangup" aria-label="Отклонить">📵</button>
-              <span style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Отклонить</span>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
-              <button id="btn-accept" class="btn-answer" aria-label="Ответить">📞</button>
-              <span style="font-size: 11px; color: var(--emerald); text-transform: uppercase; letter-spacing: 0.04em;">Ответить</span>
-            </div>
-          </div>
-
-        </footer>
-
-        <!-- Signal Logger (collapsed) -->
-        <div id="debug-log-wrapper" class="debug-log-wrapper collapsed">
-          <button id="btn-toggle-log" class="btn-toggle-log">Детали соединения ▾</button>
-          <div id="signal-log" class="signal-log"></div>
+        <!-- Calling / Connected State Actions -->
+        <div id="action-active" class="action-group hidden">
+          <button id="btn-mute" class="phone-sm-btn" aria-label="Выключить микрофон">🔇</button>
+          <button id="btn-hangup" class="btn-hangup" aria-label="Сбросить звонок">📵</button>
+          <button id="btn-speaker" class="phone-sm-btn" aria-label="Громкая связь">🔊</button>
         </div>
 
-      </main>
+        <!-- Incoming Call State Actions -->
+        <div id="action-incoming" class="action-group hidden">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+            <button id="btn-decline" class="btn-hangup" aria-label="Отклонить">📵</button>
+            <span style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Отклонить</span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+            <button id="btn-accept" class="btn-answer" aria-label="Ответить">📞</button>
+            <span style="font-size: 11px; color: var(--emerald); text-transform: uppercase; letter-spacing: 0.04em;">Ответить</span>
+          </div>
+        </div>
 
+      </footer>
+
+      <!-- Signal Logger (collapsed) -->
+      <div id="debug-log-wrapper" class="debug-log-wrapper collapsed">
+        <button id="btn-toggle-log" class="btn-toggle-log">Детали соединения ▾</button>
+        <div id="signal-log" class="signal-log"></div>
+      </div>
     </div>
 
     <!-- Onboarding Modal: nickname input -->
@@ -217,51 +253,6 @@
           </div>
           <span id="onboard-error" class="error-msg hidden" style="color: var(--coral); font-size: 0.8rem; margin-top: 5px; display: block;"></span>
           <button id="btn-save-onboard" class="btn btn-primary" style="margin-top: 16px; width: 100%;">Создать профиль</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="settings-modal hidden">
-      <div class="settings-modal__content">
-        <div class="settings-modal__header">
-          <h3>⚙️ Настройки</h3>
-          <button id="btn-close-settings" class="btn-close-settings" aria-label="Закрыть">×</button>
-        </div>
-        <div class="settings-modal__body">
-          
-          <!-- Microphone selection -->
-          <div class="settings-group">
-            <label for="select-mic" class="settings-label">Микрофон:</label>
-            <select id="select-mic" class="settings-select">
-              <option value="">По умолчанию</option>
-            </select>
-          </div>
-
-          <!-- Volume control -->
-          <div class="settings-group">
-            <label for="range-volume" class="settings-label">Громкость рингтона:</label>
-            <input type="range" id="range-volume" class="settings-range" min="0" max="1" step="0.1" value="0.5">
-          </div>
-
-          <!-- Mic testing -->
-          <div class="settings-group">
-            <label class="settings-label">Проверка микрофона:</label>
-            <div class="mic-test-container">
-              <button id="btn-test-mic" class="btn btn-ghost btn-sm">Проверить</button>
-              <div class="mic-meter">
-                <div id="mic-meter-bar" class="mic-meter-bar"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Nickname editing -->
-          <div class="settings-group">
-            <label for="input-edit-nickname" class="settings-label">Изменить имя:</label>
-            <input type="text" id="input-edit-nickname" class="settings-select" placeholder="Новое имя..." maxlength="20" />
-          </div>
-
-          <button id="btn-save-settings" class="btn btn-primary" style="margin-top: 16px; width: 100%;">Сохранить</button>
         </div>
       </div>
     </div>

@@ -1193,36 +1193,227 @@ body[data-state="failed"] .call-avatar {
   transition: width 0.08s ease;
 }
 
-/* === 16. Двухпанельная верстка (Split Pane) === */
-.split-pane {
+/* === 16. Мобильная верстка экранов и вкладок === */
+.app-screen {
+  flex: 1;
   display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
-  flex: 1;
-  min-height: 0;
   overflow: hidden;
+  position: relative;
+  background: var(--surface);
 }
 
-.app-sidebar {
-  width: 340px;
+.screen-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.4);
   flex-shrink: 0;
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
-  overflow: hidden;
-  position: relative;
-  transition: var(--transition-smooth);
 }
 
-.app-workspace {
+.screen-title-text {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+/* Вкладка: Настройки */
+.settings-list-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-xl) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Вкладка: История звонков */
+.history-list-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-lg);
+}
+
+.history-empty, .friends-empty {
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  padding: var(--space-xl) var(--space-lg);
+  opacity: 0.7;
+}
+
+/* Таб-бар (Нижняя навигация) */
+.app-tabbar {
+  height: 68px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 50;
+}
+
+.tab-item {
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+  min-width: 72px;
+}
+
+.tab-item:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tab-item.active {
+  color: var(--violet-l);
+}
+
+.tab-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.tab-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Лента контактов «В сети» (Horizontal Ribbon) */
+.online-ribbon-container {
+  padding: 16px 24px 8px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.15);
+  flex-shrink: 0;
+}
+
+.online-ribbon {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 12px 2px;
+  scrollbar-width: none;
+}
+
+.online-ribbon::-webkit-scrollbar {
+  display: none;
+}
+
+.ribbon-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 64px;
+  transition: var(--transition-fast);
+}
+
+.ribbon-item:hover {
+  transform: translateY(-2px);
+}
+
+.ribbon-avatar-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.ribbon-avatar {
+  font-size: 22px;
+}
+
+.ribbon-name {
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.ribbon-item--action .ribbon-avatar-wrap {
+  border-color: var(--violet);
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.ribbon-item--action .ribbon-name {
+  color: var(--violet-l);
+}
+
+/* Экран звонка (Call Screen Overlay) */
+.screen-call {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  background: linear-gradient(180deg, var(--abyss) 0%, #15102a 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-xl) var(--space-lg) var(--space-xl);
+  overflow: hidden;
+}
+
+.call-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 10px 16px;
+  flex-shrink: 0;
+}
+
+.call-body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  overflow: hidden;
-  position: relative;
-  transition: var(--transition-smooth);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xl);
+  width: 100%;
+}
+
+.call-footer {
+  width: 100%;
+  padding: var(--space-lg) 24px var(--space-xl);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .placeholder-icon {
@@ -1232,55 +1423,6 @@ body[data-state="failed"] .call-avatar {
 
 .hidden {
   display: none !important;
-}
-
-.workspace-active-state {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 30px;
-  width: 100%;
-}
-
-.workspace-footer {
-  padding: 15px 24px;
-  min-height: 90px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.02);
-  background: rgba(10, 15, 30, 0.2);
-  flex-shrink: 0;
-}
-
-/* === Адаптивный дизайн (Mobile Responsive) === */
-@media (max-width: 768px) {
-  .app-sidebar {
-    width: 100%;
-    border-right: none;
-  }
-  
-  .app-workspace {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 15;
-    display: none; /* Переключение через JS */
-  }
-
-  /* Класс-переключатель для мобильных */
-  .app-container.show-workspace .app-workspace {
-    display: flex;
-    animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .btn-back-to-sidebar {
-    display: flex; /* Показываем кнопку назад на мобильных */
-  }
 }
 
 @keyframes slideIn {

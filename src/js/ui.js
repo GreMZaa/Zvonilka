@@ -95,15 +95,19 @@ let addFriendErrorEl = null;
 
 let friendsListEl = null;
 
-let btnToggleManualJoinEl = null;
-let manualJoinFormEl = null;
+let screenChatsEl = null;
+let screenHistoryEl = null;
+let screenSettingsEl = null;
+let screenCallEl = null;
 
-let btnBackToSidebarEl = null;
+let tabChatsEl = null;
+let tabHistoryEl = null;
+let tabSettingsEl = null;
+
+let btnQuickRoomEl = null;
+let manualJoinModalEl = null;
+let btnCloseManualJoinEl = null;
 let inputEditNicknameEl = null;
-
-let workspaceIdleStateEl = null;
-let workspaceActiveStateEl = null;
-let workspaceTitleEl = null;
 
 
 // === Внутреннее состояние UI ===
@@ -171,15 +175,19 @@ export function initUI() {
 
   friendsListEl = document.getElementById('friends-list');
 
-  btnToggleManualJoinEl = document.getElementById('btn-toggle-manual-join');
-  manualJoinFormEl = document.getElementById('manual-join-form');
+  screenChatsEl = document.getElementById('screen-chats');
+  screenHistoryEl = document.getElementById('screen-history');
+  screenSettingsEl = document.getElementById('screen-settings');
+  screenCallEl = document.getElementById('screen-call');
 
-  btnBackToSidebarEl = document.getElementById('btn-back-to-sidebar');
+  tabChatsEl = document.getElementById('tab-chats');
+  tabHistoryEl = document.getElementById('tab-history');
+  tabSettingsEl = document.getElementById('tab-settings');
+
+  btnQuickRoomEl = document.getElementById('btn-quick-room');
+  manualJoinModalEl = document.getElementById('manual-join-modal');
+  btnCloseManualJoinEl = document.getElementById('btn-close-manual-join');
   inputEditNicknameEl = document.getElementById('input-edit-nickname');
-
-  workspaceIdleStateEl = document.getElementById('workspace-idle-state');
-  workspaceActiveStateEl = document.getElementById('workspace-active-state');
-  workspaceTitleEl = document.getElementById('workspace-title');
 
 
   if (!appEl) {
@@ -207,10 +215,17 @@ export function initUI() {
   
   if (btnMuteEl) safeBind(btnMuteEl, 'click', _handleMuteClick);
   if (btnSpeakerEl) safeBind(btnSpeakerEl, 'click', _handleSpeakerClick);
-  safeBind('btn-toggle-history', 'click', _handleToggleHistoryClick);
+
+  // Табы
+  safeBind('tab-chats', 'click', () => _switchToTab('chats'));
+  safeBind('tab-history', 'click', () => _switchToTab('history'));
+  safeBind('tab-settings', 'click', () => _switchToTab('settings'));
+
+  // Быстрая комната
+  safeBind('btn-quick-room', 'click', _handleOpenQuickRoomClick);
+  safeBind('btn-close-manual-join', 'click', _handleCloseQuickRoomClick);
 
   // Обработчики настроек
-  if (btnSettingsEl) safeBind(btnSettingsEl, 'click', _handleOpenSettingsClick);
   if (btnCloseSettingsEl) safeBind(btnCloseSettingsEl, 'click', _handleCloseSettingsClick);
   if (btnSaveSettingsEl) safeBind(btnSaveSettingsEl, 'click', _handleSaveSettingsClick);
   if (btnTestMicEl) safeBind(btnTestMicEl, 'click', _handleTestMicClick);
@@ -232,8 +247,6 @@ export function initUI() {
   if (btnSaveOnboardEl) safeBind(btnSaveOnboardEl, 'click', _handleSaveOnboardClick);
   if (btnCopyMyCodeEl) safeBind(btnCopyMyCodeEl, 'click', _handleCopyMyCodeClick);
   if (btnAddFriendEl) safeBind(btnAddFriendEl, 'click', _handleFriendAddClick);
-  if (btnToggleManualJoinEl) safeBind(btnToggleManualJoinEl, 'click', _handleToggleManualJoinClick);
-  if (btnBackToSidebarEl) safeBind(btnBackToSidebarEl, 'click', _handleBackToSidebarClick);
 
   // Подписка на статусы WebRTC
   onConnectionStateChange((state) => {
@@ -342,12 +355,9 @@ function _transitionToState(state) {
   // Получаем текущие данные сигналинга
   const sigState = getSignalingState();
 
-  // Управление отображением панелей рабочей области (split-pane)
+  // Управление отображением экрана звонка
   if (state === 'closed' || state === 'idle') {
-    _show(workspaceIdleStateEl);
-    _hide(workspaceActiveStateEl);
-    _updateText(workspaceTitleEl, 'Звонилка');
-    if (appEl) appEl.classList.remove('show-workspace');
+    _hide(screenCallEl);
     
     // Сбрасываем таймер таймаута вызова
     if (callingTimeoutId) {
@@ -355,10 +365,7 @@ function _transitionToState(state) {
       callingTimeoutId = null;
     }
   } else {
-    _hide(workspaceIdleStateEl);
-    _show(workspaceActiveStateEl);
-    _updateText(workspaceTitleEl, currentCallPeerName || 'Звонилка');
-    if (appEl) appEl.classList.add('show-workspace');
+    _show(screenCallEl);
   }
 
   // 2. Обновляем элементы управления и тексты
@@ -368,8 +375,6 @@ function _transitionToState(state) {
       _updateText(callStatusEl, 'Готов к звонку');
       _hide(callTimerEl);
       _hide(roomBadgeEl);
-      _show(joinSectionEl);
-      _show(historySectionEl); // Показываем секцию истории
       
       _show(actionIdleEl);
       _hide(actionActiveEl);
@@ -382,8 +387,6 @@ function _transitionToState(state) {
       _hide(callTimerEl);
       _show(roomBadgeEl);
       _updateText(roomCodeEl, sigState.roomId || '------');
-      _hide(joinSectionEl);
-      _hide(historySectionEl);
       _show(callMetaEl);
       
       _hide(actionIdleEl);
@@ -403,8 +406,6 @@ function _transitionToState(state) {
       _startTimer();
       _show(roomBadgeEl);
       _updateText(roomCodeEl, sigState.roomId || '------');
-      _hide(joinSectionEl);
-      _hide(historySectionEl);
       _show(callMetaEl);
       
       _hide(actionIdleEl);
@@ -426,8 +427,6 @@ function _transitionToState(state) {
       _hide(callTimerEl);
       _show(roomBadgeEl);
       _updateText(roomCodeEl, sigState.roomId || '------');
-      _hide(joinSectionEl);
-      _hide(historySectionEl);
       _hide(callMetaEl);
       
       _hide(actionIdleEl);
@@ -444,8 +443,6 @@ function _transitionToState(state) {
       _updateText(callStatusEl, 'Ошибка связи');
       _hide(callTimerEl);
       _show(roomBadgeEl);
-      _hide(joinSectionEl);
-      _hide(historySectionEl);
       _hide(callMetaEl);
       _show(actionActiveEl);
       _addSignalLog('❌ Соединение не удалось установить или оборвалось.');
@@ -457,8 +454,6 @@ function _transitionToState(state) {
       _updateText(callStatusEl, 'Лимит ожидания');
       _hide(callTimerEl);
       _show(roomBadgeEl);
-      _hide(joinSectionEl);
-      _hide(historySectionEl);
       _show(actionActiveEl);
       _addSignalLog('⏳ Превышено время ожидания ответа.');
 
@@ -469,8 +464,6 @@ function _transitionToState(state) {
       _updateText(callStatusEl, 'Нет микрофона');
       _hide(callTimerEl);
       _hide(roomBadgeEl);
-      _hide(joinSectionEl);
-      _hide(historySectionEl);
       _show(actionActiveEl);
       _addSignalLog('⚠️ Ошибка: запрещен доступ к микрофону.');
 
@@ -522,6 +515,7 @@ async function _handleJoinClick() {
 
   try {
     await joinRoom(roomId);
+    _handleCloseQuickRoomClick();
     _transitionToState('connecting');
     await prepareToReceiveCall();
   } catch (err) {
@@ -818,6 +812,78 @@ function _renderHistory() {
   }
 }
 
+// ===================================
+// Вкладки и мобильные переключатели
+// ===================================
+
+let currentTab = 'chats';
+function _switchToTab(tab) {
+  currentTab = tab;
+  
+  const tabIds = ['tab-chats', 'tab-history', 'tab-settings'];
+  tabIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (id === `tab-${tab}`) {
+        el.classList.add('active');
+      } else {
+        el.classList.remove('active');
+      }
+    }
+  });
+
+  const screenIds = ['screen-chats', 'screen-history', 'screen-settings'];
+  screenIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (id === `screen-${tab}`) {
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    }
+  });
+
+  if (tab === 'settings') {
+    // Автоматически запрашиваем список микрофонов при открытии настроек
+    _loadMicsOnly();
+  } else if (tab === 'history') {
+    _renderHistory();
+  }
+}
+
+function _handleOpenQuickRoomClick() {
+  if (manualJoinModalEl) {
+    manualJoinModalEl.classList.remove('hidden');
+  }
+}
+
+function _handleCloseQuickRoomClick() {
+  if (manualJoinModalEl) {
+    manualJoinModalEl.classList.add('hidden');
+  }
+}
+
+// Загрузка только микрофонов, без переключения табов (внутренняя вспомогательная функция)
+async function _loadMicsOnly() {
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioInputs = devices.filter(device => device.kind === 'audioinput');
+
+    if (selectMicEl) {
+      const savedMic = localStorage.getItem('zvonilka_microphone_id') || '';
+      selectMicEl.innerHTML = audioInputs.map(device => {
+        const selected = device.deviceId === savedMic ? 'selected' : '';
+        return `<option value="${device.deviceId}" ${selected}>${device.label || 'Микрофон ' + device.deviceId.slice(0, 4)}</option>`;
+      }).join('');
+      selectMicEl.insertAdjacentHTML('afterbegin', `<option value="" ${savedMic === '' ? 'selected' : ''}>По умолчанию</option>`);
+    }
+  } catch (err) {
+    log('UI', `⚠️ Не удалось получить список устройств: ${err.message}`);
+  }
+}
+
 // ============================
 // Настройки (Settings Logic)
 // ============================
@@ -829,17 +895,14 @@ let micTestingAnalyser = null;
 let micTestingRaf = null;
 
 /**
- * Открывает окно настроек и запрашивает список микрофонов.
+ * Открывает вкладку настроек и запрашивает список микрофонов.
  * @private
  */
 async function _handleOpenSettingsClick() {
-  if (settingsModalEl) {
-    settingsModalEl.classList.remove('hidden');
-  }
-
+  _switchToTab('settings');
+  
   // Запрашиваем устройства
   try {
-    // Вначале запрашиваем доступ, чтобы браузер отдал названия девайсов
     await navigator.mediaDevices.getUserMedia({ audio: true });
     
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -866,14 +929,11 @@ async function _handleOpenSettingsClick() {
  * @private
  */
 function _handleCloseSettingsClick() {
-  if (settingsModalEl) {
-    settingsModalEl.classList.add('hidden');
-  }
   _stopMicTesting();
 }
 
 /**
- * Сохраняет настройки и закрывает окно.
+ * Сохраняет настройки и возвращает к списку чатов.
  * @private
  */
 async function _handleSaveSettingsClick() {
@@ -906,6 +966,7 @@ async function _handleSaveSettingsClick() {
 
   log('UI', '✅ Настройки успешно сохранены.');
   _handleCloseSettingsClick();
+  _switchToTab('chats');
 }
 
 /**
@@ -1134,6 +1195,18 @@ async function _updateFriendsList() {
 
   try {
     const friends = await loadFriends();
+    
+    // Получаем элемент горизонтальной ленты онлайн-контактов
+    const ribbonEl = document.getElementById('online-ribbon');
+    if (ribbonEl) {
+      // Сохраняем кнопку быстрого входа
+      const quickActionBtn = document.getElementById('btn-quick-room');
+      ribbonEl.innerHTML = '';
+      if (quickActionBtn) {
+        ribbonEl.appendChild(quickActionBtn);
+      }
+    }
+
     if (!friends || friends.length === 0) {
       friendsListEl.innerHTML = '<div class="friends-empty">Список друзей пуст. Добавьте друга по его коду выше!</div>';
       return;
@@ -1149,6 +1222,25 @@ async function _updateFriendsList() {
       const presenceClass = isOnline ? 'online' : '';
       const presenceText = isOnline ? 'В сети' : 'Не в сети';
 
+      // 1. Добавляем в горизонтальную ленту, если друг в сети
+      if (isOnline && ribbonEl) {
+        const firstLetter = friend.nickname ? friend.nickname.charAt(0).toUpperCase() : '👤';
+        const ribbonItem = document.createElement('div');
+        ribbonItem.className = 'ribbon-item';
+        ribbonItem.innerHTML = `
+          <div class="ribbon-avatar-wrap">
+            <span class="ribbon-avatar">${firstLetter}</span>
+            <div class="presence-dot online"></div>
+          </div>
+          <span class="ribbon-name">${friend.nickname}</span>
+        `;
+        ribbonItem.addEventListener('click', () => {
+          _initiateDirectCall(friend.id, friend.nickname);
+        });
+        ribbonEl.appendChild(ribbonItem);
+      }
+
+      // 2. Рендерим в вертикальный список всех друзей
       const friendItem = document.createElement('div');
       friendItem.className = 'friend-item';
       friendItem.innerHTML = `
@@ -1173,9 +1265,9 @@ async function _updateFriendsList() {
         _deleteFriend(friend.id, friend.nickname);
       });
 
-      // При клике на элемент открывается чат (workspace)
+      // При клике на самого друга сразу запускаем прямой вызов
       friendItem.addEventListener('click', () => {
-        _openWorkspaceForFriend(friend.nickname);
+        _initiateDirectCall(friend.id, friend.nickname);
       });
 
       friendsListEl.appendChild(friendItem);
@@ -1297,40 +1389,6 @@ async function _deleteFriend(friendId, friendNickname) {
 }
 
 /**
- * Переключает отображение формы ручного входа в комнату.
- * @private
- */
-function _handleToggleManualJoinClick() {
-  if (!manualJoinFormEl || !btnToggleManualJoinEl) return;
-
-  const isHidden = manualJoinFormEl.classList.toggle('hidden');
-  if (isHidden) {
-    btnToggleManualJoinEl.textContent = 'Вход по коду комнаты ▾';
-  } else {
-    btnToggleManualJoinEl.textContent = 'Вход по коду комнаты ▴';
-  }
-}
-
-/**
- * Возврат на боковую панель на мобильных устройствах.
- * @private
- */
-function _handleBackToSidebarClick() {
-  if (appEl) appEl.classList.remove('show-workspace');
-  _transitionToState('closed');
-}
-
-/**
- * Открывает пустую рабочую область для друга.
- * @private
- */
-function _openWorkspaceForFriend(friendNickname) {
-  currentCallPeerName = friendNickname;
-  if (workspaceTitleEl) workspaceTitleEl.textContent = friendNickname;
-  if (appEl) appEl.classList.add('show-workspace');
-}
-
-/**
  * Инициация прямого вызова через broadcast.
  * @private
  */
@@ -1343,7 +1401,6 @@ async function _initiateDirectCall(friendId, friendNickname) {
   currentCallPeerName = friendNickname;
   _addSignalLog(`📞 Вызов друга: ${friendNickname}...`);
   
-  if (appEl) appEl.classList.add('show-workspace');
   _transitionToState('connecting');
 
   try {
