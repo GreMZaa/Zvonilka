@@ -1562,3 +1562,35 @@ body[data-state="failed"] .call-avatar {
   }
 }
 
+/* === 17. Мобильные адаптивные стили (iPhone/Notch support) === */
+@media (max-width: 480px) {
+  body {
+    padding: 0;
+    background: var(--surface);
+  }
+
+  .app-container {
+    max-width: none;
+    max-height: none;
+    height: 100dvh;
+    height: 100svh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  .screen-header {
+    padding-top: calc(env(safe-area-inset-top) + 12px);
+  }
+
+  .screen-call {
+    padding-top: calc(env(safe-area-inset-top) + 20px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+  }
+
+  .app-tabbar {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 4px);
+    height: calc(68px + env(safe-area-inset-bottom));
+  }
+}
+
