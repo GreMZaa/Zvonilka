@@ -21,7 +21,7 @@ import {
   sendCallInvite,
   sendCallResponse
 } from './signaling.js';
-import { startCall, prepareToReceiveCall, acceptIncomingCall, hangUp, onConnectionStateChange, toggleMute, onQualityChange, setMicrophoneId } from './webrtc.js';
+import { startCall, prepareToReceiveCall, acceptIncomingCall, hangUp, onConnectionStateChange, toggleMute, onQualityChange, setMicrophoneId, unlockAudioContext } from './webrtc.js';
 import { log } from './utils.js';
 import { 
   playRingtone, 
@@ -486,6 +486,7 @@ function _transitionToState(state) {
  * @private
  */
 async function _handleCallClick() {
+  unlockAudioContext();
   _updateText(callStatusEl, 'Создание комнаты...');
   _addSignalLog('📞 Инициация вызова...');
   
@@ -504,6 +505,7 @@ async function _handleCallClick() {
  * @private
  */
 async function _handleJoinClick() {
+  unlockAudioContext();
   const roomId = inputRoomEl.value.trim().toUpperCase();
   if (!roomId || roomId.length < 4) {
     _addSignalLog('⚠️ Введите корректный код комнаты');
@@ -529,6 +531,7 @@ async function _handleJoinClick() {
  * @private
  */
 async function _handleAcceptClick() {
+  unlockAudioContext();
   _addSignalLog('🟢 Принятие вызова...');
   try {
     await acceptIncomingCall();
@@ -1393,6 +1396,7 @@ async function _deleteFriend(friendId, friendNickname) {
  * @private
  */
 async function _initiateDirectCall(friendId, friendNickname) {
+  unlockAudioContext();
   if (getSignalingState().role) {
     alert('Вы уже участвуете в вызове или ожидании!');
     return;

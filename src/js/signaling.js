@@ -312,7 +312,6 @@ export async function cleanup() {
   currentRole = null;
   isConnected = false;
   signalListeners.length = 0;
-  presenceListeners.length = 0; // Очищаем слушателей присутствия
 
   log('Signaling', '✅ Очистка завершена.');
 }

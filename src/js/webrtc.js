@@ -213,13 +213,39 @@ function _createPeerConnection(stream) {
     const remoteStream = event.streams[0];
     
     if (!remoteAudioElement) {
-      remoteAudioElement = new Audio();
+      remoteAudioElement = document.getElementById('remote-audio');
+      if (!remoteAudioElement) {
+        remoteAudioElement = document.createElement('audio');
+        remoteAudioElement.id = 'remote-audio';
+        remoteAudioElement.setAttribute('autoplay', '');
+        remoteAudioElement.setAttribute('playsinline', '');
+        remoteAudioElement.setAttribute('webkit-playsinline', '');
+        remoteAudioElement.style.display = 'none';
+        document.body.appendChild(remoteAudioElement);
+      }
     }
     
     remoteAudioElement.srcObject = remoteStream;
+    
+    // Запуск воспроизведения с защитой от ограничений автоплея
     remoteAudioElement.play()
       .then(() => log('WebRTC', '🔊 Воспроизведение удалённого звука запущено.'))
-      .catch(err => log('WebRTC', `⚠️ Ошибка автовоспроизведения звука: ${err.message}`));
+      .catch(err => {
+        log('WebRTC', `⚠️ Ошибка автовоспроизведения звука: ${err.message}. Будет запущен при клике.`);
+        
+        // Резервный запуск при клике на экран
+        const playOnDocClick = () => {
+          if (remoteAudioElement) {
+            remoteAudioElement.play()
+              .then(() => {
+                log('WebRTC', '🔊 Звук запущен по взаимодействию пользователя.');
+                document.removeEventListener('click', playOnDocClick);
+              })
+              .catch(e => log('WebRTC', `⚠️ Резервный запуск не удался: ${e.message}`));
+          }
+        };
+        document.addEventListener('click', playOnDocClick);
+      });
   };
 
   // Мониторинг изменения состояния подключения
@@ -762,5 +788,28 @@ export function toggleMute() {
   });
 
   return !isEnabled; // Возвращаем новое состояние: true = приглушен (muted)
+}
+
+/**
+ * Разблокирует воспроизведение аудио в Safari на iOS.
+ * Проигрывает пустой немой звук в ответ на пользовательский жест.
+ */
+export function unlockAudioContext() {
+  const audio = document.createElement('audio');
+  audio.setAttribute('playsinline', '');
+  audio.setAttribute('webkit-playsinline', '');
+  audio.style.display = 'none';
+  audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+  
+  document.body.appendChild(audio);
+  audio.play()
+    .then(() => {
+      log('WebRTC', '🔊 Аудио-контекст iOS/Safari успешно разблокирован.');
+      audio.remove();
+    })
+    .catch(err => {
+      log('WebRTC', `⚠️ Не удалось разблокировать аудио-контекст: ${err.message}`);
+      audio.remove();
+    });
 }
 
