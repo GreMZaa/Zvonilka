@@ -690,11 +690,9 @@ function _handleMuteClick() {
   const isMuted = toggleMute();
   if (isMuted) {
     btnMuteEl.classList.add('muted');
-    btnMuteEl.textContent = '🎙️';
     _addSignalLog('🔇 Ваш микрофон отключен');
   } else {
     btnMuteEl.classList.remove('muted');
-    btnMuteEl.textContent = '🔇';
     _addSignalLog('🎤 Ваш микрофон включен');
   }
 }
@@ -704,11 +702,9 @@ function _handleSpeakerClick() {
   isSpeakerActive = !isSpeakerActive;
   if (isSpeakerActive) {
     btnSpeakerEl.classList.add('active');
-    btnSpeakerEl.textContent = '🔊';
     _addSignalLog('🔊 Громкая связь включена');
   } else {
     btnSpeakerEl.classList.remove('active');
-    btnSpeakerEl.textContent = '🔕';
     _addSignalLog('🔕 Громкая связь выключена');
   }
 }

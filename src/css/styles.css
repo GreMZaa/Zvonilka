@@ -619,13 +619,12 @@ body[data-state="failed"] {
 
 /* Мелкие круглые кнопки */
 .phone-sm-btn {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: var(--radius-full);
   background: var(--raised);
   border: 1px solid var(--border);
   color: var(--text);
-  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -638,11 +637,28 @@ body[data-state="failed"] {
   background: var(--border);
 }
 
-.phone-sm-btn.active {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.3);
-  color: var(--emerald);
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+.phone-sm-btn svg, .btn-hangup svg, .btn-answer svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Переключение видимости SVG для Mute */
+.phone-sm-btn.muted .icon-mic-on {
+  display: none !important;
+}
+
+.phone-sm-btn.muted .icon-mic-off {
+  display: block !important;
+}
+
+/* Переключение видимости SVG для Speaker */
+.phone-sm-btn.active .icon-speaker-off {
+  display: none !important;
+}
+
+.phone-sm-btn.active .icon-speaker-on {
+  display: block !important;
+}
 }
 
 .phone-sm-btn.muted {
@@ -1462,6 +1478,31 @@ body[data-state="failed"] .call-avatar {
 
 .screen-call .room-badge__code {
   color: var(--violet-l);
+}
+
+.screen-call .phone-sm-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.screen-call .phone-sm-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.screen-call .phone-sm-btn.muted {
+  background: rgba(255, 59, 48, 0.2) !important;
+  border-color: rgba(255, 59, 48, 0.4) !important;
+  color: #ff453a !important;
+  box-shadow: none !important;
+}
+
+.screen-call .phone-sm-btn.active {
+  background: rgba(52, 199, 89, 0.2) !important;
+  border-color: rgba(52, 199, 89, 0.4) !important;
+  color: #30d158 !important;
+  box-shadow: none !important;
 }
 
 /* Аватар на экране вызова */
