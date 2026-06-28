@@ -233,20 +233,21 @@ body[data-state="failed"] {
 
 /* === 6. Секция добавления друга === */
 .add-friend-section {
-  padding: var(--space-base) var(--space-lg);
+  padding: 16px 24px;
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  background: rgba(19, 19, 30, 0.5);
+  background: var(--surface);
 }
 
 .section-title {
   font-size: 11px;
   text-transform: uppercase;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--muted);
   letter-spacing: 0.08em;
+  margin-bottom: 4px;
 }
 
 .add-friend-control {
@@ -256,9 +257,9 @@ body[data-state="failed"] {
 
 .add-friend-control input {
   flex: 1;
-  background: var(--abyss);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
+  background: #f2f2f7;
+  border: none;
+  border-radius: 10px;
   padding: 10px 14px;
   color: var(--text);
   outline: none;
@@ -268,28 +269,28 @@ body[data-state="failed"] {
 }
 
 .add-friend-control input:focus {
-  border-color: var(--violet);
+  background: #e5e5ea;
 }
 
-.btn-add-friend {
-  background: var(--violet);
+.btn-add-friend-action {
+  background: var(--violet) !important;
+  color: #fff !important;
   border: none;
-  color: #fff;
-  border-radius: var(--radius-xs);
+  border-radius: 10px !important;
   width: 38px;
   height: 38px;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   justify-content: center;
   align-items: center;
   transition: var(--transition-fast);
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
 }
 
-.btn-add-friend:hover {
-  background: var(--violet-l);
+.btn-add-friend-action:hover {
+  background: var(--violet-l) !important;
   transform: translateY(-1px);
 }
 
@@ -299,8 +300,12 @@ body[data-state="failed"] {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  padding: var(--space-lg);
+  padding: var(--space-lg) 0 0;
   overflow: hidden;
+}
+
+.friends-list-container .section-title {
+  padding: 0 24px;
 }
 
 .friends-list {
@@ -308,106 +313,102 @@ body[data-state="failed"] {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
 }
 
 .friend-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 14px;
-  background: rgba(28, 28, 46, 0.3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  transition: var(--transition-fast);
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
   cursor: pointer;
+  transition: background-color var(--transition-fast);
 }
 
 .friend-item:hover {
-  background: var(--raised);
-  border-color: var(--dim);
-}
-
-.friend-item.active {
-  border-color: var(--violet);
-  background: rgba(124, 58, 237, 0.05);
+  background-color: #f9f9fb;
 }
 
 .friend-info {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  min-width: 0;
+  gap: 12px;
+}
+
+.friend-avatar-wrap {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #e9e9eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.friend-avatar {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--violet);
 }
 
 .presence-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: var(--muted);
-  flex-shrink: 0;
-  transition: var(--transition-smooth);
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: var(--dim);
 }
 
 .presence-dot.online {
   background: var(--emerald);
-  box-shadow: 0 0 8px var(--emerald);
 }
 
 .friend-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .friend-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+}
+
+.btn-friend-call, .btn-friend-delete {
+  background: var(--raised);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: var(--transition-fast);
 }
 
 .btn-friend-call {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  color: var(--emerald);
-  border-radius: var(--radius-xs);
-  width: 32px;
-  height: 32px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  transition: var(--transition-fast);
+  color: var(--violet);
 }
 
 .btn-friend-call:hover {
-  background: var(--emerald);
-  color: #fff;
-  transform: scale(1.05);
+  background: rgba(0, 122, 255, 0.1);
 }
 
 .btn-friend-delete {
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.15);
   color: var(--coral);
-  border-radius: var(--radius-xs);
-  width: 32px;
-  height: 32px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  transition: var(--transition-fast);
-  opacity: 0;
 }
 
-.friend-item:hover .btn-friend-delete {
-  opacity: 0.7;
+.btn-friend-delete:hover {
+  background: rgba(255, 59, 48, 0.1);
+}
 }
 
 .btn-friend-delete:hover {
@@ -971,107 +972,6 @@ body[data-state="failed"] {
   color: var(--emerald);
 }
 
-/* Список друзей (Chats List) */
-.friends-list {
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-}
-
-.friend-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 24px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-}
-
-.friend-item:hover {
-  background-color: #f9f9fb;
-}
-
-.friend-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.friend-avatar-wrap {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #e9e9eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.friend-avatar {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--violet);
-}
-
-.presence-dot {
-  position: absolute;
-  bottom: 0px;
-  right: 0px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 2px solid var(--surface);
-  background: var(--dim);
-}
-
-.presence-dot.online {
-  background: var(--emerald);
-}
-
-.friend-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.friend-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-friend-call, .btn-friend-delete {
-  background: var(--raised);
-  border: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 16px;
-  transition: var(--transition-fast);
-}
-
-.btn-friend-call {
-  color: var(--violet);
-}
-
-.btn-friend-call:hover {
-  background: rgba(0, 122, 255, 0.1);
-}
-
-.btn-friend-delete {
-  color: var(--coral);
-}
-
-.btn-friend-delete:hover {
-  background: rgba(255, 59, 48, 0.1);
-}
 
 /* === 13. Рабочая область звонка (Active State) === */
 .workspace-active-state {
@@ -1467,7 +1367,7 @@ body[data-state="failed"] .call-avatar {
   gap: 6px;
   cursor: pointer;
   flex-shrink: 0;
-  width: 64px;
+  width: 76px;
   transition: var(--transition-fast);
 }
 
@@ -1499,9 +1399,13 @@ body[data-state="failed"] .call-avatar {
   color: var(--text);
   font-weight: 500;
   text-align: center;
-  white-space: nowrap;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   width: 100%;
 }
 
